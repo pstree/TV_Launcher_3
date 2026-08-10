@@ -221,6 +221,7 @@ fun AppsScreen(
                 itemsIndexed(viewModel.activityModelList) { index, item ->
                     ActivityButtonTv(
                         modifier = Modifier
+                            .fillMaxSize()
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused) {
                                     Log.i(tag, "FocusedItemIndex: $index")

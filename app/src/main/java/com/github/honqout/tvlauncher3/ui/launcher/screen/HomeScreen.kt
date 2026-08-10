@@ -85,7 +85,7 @@ fun HomeScreen(
             ) {
                 itemsIndexed(
                     items = fixedIconList,
-                    key = { index, item -> "key_${index}_${item?.packageName}_${item?.activityName}" }
+                    key = { index, item -> "key_${index}_${item?.packageName ?: "null"}_${item?.activityName ?: "null"}" }
                 ) { index, item ->
                     AppShortcutButtonTv(
                         activityModel = item,
