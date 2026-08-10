@@ -252,6 +252,7 @@ fun AppListDialog(
 
                     ActivityButtonTv(
                         modifier = Modifier
+                            .fillMaxSize()
                             .focusRequester(focusRequester)
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused) {
