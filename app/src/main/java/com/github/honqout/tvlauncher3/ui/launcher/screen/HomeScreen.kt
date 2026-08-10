@@ -1,4 +1,4 @@
-package com.github.honqout.tvlauncher3.components.screen
+package com.github.honqout.tvlauncher3.ui.launcher.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -28,7 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.github.honqout.tvlauncher3.activity.viewmodel.LauncherViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.components.button.AppShortcutButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.AppListDialog
 import com.github.honqout.tvlauncher3.datastore.repository.IconRepository
@@ -85,11 +85,11 @@ fun HomeScreen(
             ) {
                 itemsIndexed(
                     items = fixedIconList,
-                    key = { index, item -> "key_${index}" }
+                    key = { index, item -> "key_${index}_${item?.packageName}_${item?.activityName}" }
                 ) { index, item ->
                     AppShortcutButtonTv(
                         modifier = Modifier,
-                        item = item,
+                        activityModel = item,
                         onFocused = {
                             viewModel.setFocusedItemIndex1(index)
                         },

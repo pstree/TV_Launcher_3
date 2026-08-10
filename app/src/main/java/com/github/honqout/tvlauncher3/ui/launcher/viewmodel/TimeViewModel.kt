@@ -1,4 +1,4 @@
-package com.github.honqout.tvlauncher3.activity.viewmodel
+package com.github.honqout.tvlauncher3.ui.launcher.viewmodel
 
 import android.app.Application
 import android.content.BroadcastReceiver

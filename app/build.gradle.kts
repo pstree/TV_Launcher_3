@@ -23,8 +23,8 @@ configure<ApplicationExtension> {
         applicationId = "com.github.honqout.tvlauncher3"
         minSdk = 24
         targetSdk = 37
-        versionCode = 7
-        versionName = "1.1.5"
+        versionCode = 8
+        versionName = "1.1.6"
 
         ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))

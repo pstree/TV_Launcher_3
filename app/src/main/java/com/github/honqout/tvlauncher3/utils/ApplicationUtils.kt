@@ -13,11 +13,10 @@ import android.content.pm.ShortcutInfo
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Process
-import android.text.TextUtils
 import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.core.content.pm.PackageInfoCompat
-import com.github.honqout.tvlauncher3.dto.ActivityDto
+import com.github.honqout.tvlauncher3.data.ActivityModel
 
 class ApplicationUtils {
     companion object {
@@ -448,7 +447,7 @@ class ApplicationUtils {
         }
 
         /**
-         * Get a list of ActivityDto of all launchable activity of certain application(s).
+         * Get a list of ActivityModel of all launchable activity of certain application(s).
          *
          * @param packageName Specify which package should these ActivityDtos belong to. Passing
          *                    null or empty string ("") to get all ActivityDtos of all installed
@@ -458,14 +457,14 @@ class ApplicationUtils {
             context: Context,
             type: LauncherActivityType,
             packageName: String?
-        ): List<ActivityDto> {
+        ): List<ActivityModel> {
             val intentActivityList = getLauncherActivityList(context, type, packageName)
-            val activityDtoList: MutableList<ActivityDto> = mutableListOf()
+            val activityModelList: MutableList<ActivityModel> = mutableListOf()
             intentActivityList.forEach { resolveInfo ->
-                val activityDto = ActivityDto.fromResolveInfo(context, resolveInfo)
-                activityDtoList.add(activityDto)
+                val activityModel = ActivityModel.fromResolveInfo(context, resolveInfo)
+                activityModelList.add(activityModel)
             }
-            return activityDtoList
+            return activityModelList
         }
 
         fun shouldShowBelongToHint(
@@ -476,7 +475,7 @@ class ApplicationUtils {
             if (packageName == null || activityName == null) {
                 return false
             }
-            if (TextUtils.isEmpty(packageName) || TextUtils.isEmpty(activityName)) {
+            if (packageName.isEmpty()) {
                 return false
             }
             val applicationLabel = getApplicationLabel(context, packageName) ?: return false

@@ -147,6 +147,21 @@ fun RoundRectButtonTv(
 }
 
 @Composable
+fun IconFromResourceTv(
+    @DrawableRes drawableRes: Int,
+    contentDescription: String?
+) {
+    Image(
+        painter = painterResource(drawableRes),
+        contentDescription = contentDescription,
+        modifier = Modifier
+            .requiredSize(width = 75.dp, height = 75.dp),
+        contentScale = ContentScale.Fit,
+        colorFilter = ColorFilter.tint(Color.White)
+    )
+}
+
+@Composable
 fun RoundRectButtonTv(
     modifier: Modifier = Modifier,
     @DrawableRes drawableRes: Int,
@@ -162,13 +177,9 @@ fun RoundRectButtonTv(
     RoundRectButtonTvImpl(
         modifier = modifier,
         icon = {
-            Image(
-                painter = painterResource(drawableRes),
-                contentDescription = contentDescription,
-                modifier = Modifier
-                    .requiredSize(width = 75.dp, height = 75.dp),
-                contentScale = ContentScale.Fit,
-                colorFilter = ColorFilter.tint(Color.White)
+            IconFromResourceTv(
+                drawableRes = drawableRes,
+                contentDescription = contentDescription
             )
         },
         label = label,

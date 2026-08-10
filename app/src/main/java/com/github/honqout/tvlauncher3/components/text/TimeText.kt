@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.TextUnit
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_EXTRA_SMALL
-import com.github.honqout.tvlauncher3.activity.viewmodel.TimeViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
 
 @Composable
 fun TimeText(

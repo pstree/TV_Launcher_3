@@ -1,4 +1,4 @@
-package com.github.honqout.tvlauncher3.dto
+package com.github.honqout.tvlauncher3.data
 
 import android.content.Context
 import android.content.pm.ResolveInfo
@@ -8,7 +8,7 @@ import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.IconType
 import com.github.honqout.tvlauncher3.utils.DrawableUtils
 
-data class ActivityDto(
+data class ActivityModel(
     var packageName: String,
     var activityName: String,
     var label: String = "",
@@ -16,7 +16,7 @@ data class ActivityDto(
     @param:ColorInt var color: Int = Color.TRANSPARENT
 ) {
     companion object {
-        fun fromResolveInfo(context: Context, resolveInfo: ResolveInfo): ActivityDto {
+        fun fromResolveInfo(context: Context, resolveInfo: ResolveInfo): ActivityModel {
             val packageName = ApplicationUtils.getPackageName(resolveInfo)
             val activityName = ApplicationUtils.getActivityName(resolveInfo)
             val (iconType, icon) = ApplicationUtils.getActivityIconPair(
@@ -24,7 +24,7 @@ data class ActivityDto(
                 packageName,
                 activityName
             )
-            return ActivityDto(
+            return ActivityModel(
                 packageName = packageName,
                 activityName = activityName,
                 label = ApplicationUtils.getActivityLabel(context, resolveInfo),

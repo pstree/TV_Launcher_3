@@ -15,14 +15,14 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.size.Precision
-import com.github.honqout.tvlauncher3.dto.ActivityDto
+import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.coil.model.ActivityIconModel
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 
 @Composable
 fun AppButton(
     modifier: Modifier = Modifier,
-    item: ActivityDto,
+    item: ActivityModel,
     contentDefaultColor: Color = colorScheme.secondary,
     contentFocusedColor: Color = colorScheme.primary,
     onShortClick: () -> Unit = {},

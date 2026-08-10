@@ -45,7 +45,7 @@ import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_LARGE
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_SMALL
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
-import com.github.honqout.tvlauncher3.dto.ActivityDto
+import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.coil.model.AppIconModel
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.IntentUtils
@@ -53,7 +53,7 @@ import com.github.honqout.tvlauncher3.components.button.AppActionButtonTv
 
 @Composable
 fun AppActionDialog(
-    item: ActivityDto,
+    item: ActivityModel,
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalContext.current

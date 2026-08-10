@@ -187,6 +187,21 @@ fun RoundRectButton(
 }
 
 @Composable
+fun IconFromResource(
+    @DrawableRes drawableRes: Int,
+    contentDescription: String?
+) {
+    Image(
+        painter = painterResource(drawableRes),
+        contentDescription = contentDescription,
+        modifier = Modifier
+            .requiredSize(width = 75.dp, height = 75.dp),
+        contentScale = ContentScale.Fit,
+        colorFilter = ColorFilter.tint(Color.White)
+    )
+}
+
+@Composable
 fun RoundRectButton(
     modifier: Modifier = Modifier,
     @DrawableRes drawableRes: Int,
@@ -202,13 +217,9 @@ fun RoundRectButton(
     RoundRectButtonImpl(
         modifier = modifier,
         icon = {
-            Image(
-                painter = painterResource(drawableRes),
-                contentDescription = contentDescription,
-                modifier = Modifier
-                    .requiredSize(width = 75.dp, height = 75.dp),
-                contentScale = ContentScale.Fit,
-                colorFilter = ColorFilter.tint(Color.White)
+            IconFromResource(
+                drawableRes = drawableRes,
+                contentDescription = contentDescription
             )
         },
         label = label,

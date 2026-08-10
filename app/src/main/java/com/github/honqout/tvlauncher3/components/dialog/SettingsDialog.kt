@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -28,20 +28,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.github.honqout.tvlauncher3.R
-import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_EXTRA_LARGE
-import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
-import com.github.honqout.tvlauncher3.ui.theme.PADDING_LIST_CONTENT_EDGE
-import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_HORIZONTAL
-import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_VERTICAL
-import com.github.honqout.tvlauncher3.activity.viewmodel.LauncherViewModel
-import com.github.honqout.tvlauncher3.activity.viewmodel.TimeViewModel
-import com.github.honqout.tvlauncher3.utils.IntentUtils
 import com.github.honqout.tvlauncher3.components.button.SettingsActionButtonTv
 import com.github.honqout.tvlauncher3.components.text.DateAndWeekdayText
 import com.github.honqout.tvlauncher3.components.text.TimeText
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
+import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_EXTRA_LARGE
+import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
+import com.github.honqout.tvlauncher3.ui.theme.PADDING_LIST_CONTENT_EDGE
+import com.github.honqout.tvlauncher3.ui.theme.SETTINGS_ACTION_BUTTON_WIDTH
+import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_HORIZONTAL
+import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_VERTICAL
+import com.github.honqout.tvlauncher3.utils.IntentUtils
 
 @Composable
 fun SettingsDialog(
@@ -51,9 +53,11 @@ fun SettingsDialog(
 ) {
     val tag = "SettingsDialog"
     val context = LocalContext.current
-    val numColumns = 2
+    val columnCount = 2
     val lazyGridState = rememberLazyGridState()
     val topBarHeight by launcherViewModel.topBarHeight.collectAsState()
+    val gridWidth =
+        2 * SETTINGS_ACTION_BUTTON_WIDTH + 2 * SPACE_LIST_CONTENT_HORIZONTAL + 4 * PADDING_LIST_CONTENT_EDGE
 
     BackHandler {
         Log.i(tag, "Pressed back button.")
@@ -75,8 +79,8 @@ fun SettingsDialog(
         ) {
             Column(
                 modifier = Modifier
+                    .wrapContentWidth()
                     .fillMaxHeight()
-                    .fillMaxWidth(0.4f)
                     .background(Color.Transparent)
                     .align(Alignment.TopEnd)
                     .padding(PADDING_DIALOG_EDGE)
@@ -94,7 +98,7 @@ fun SettingsDialog(
                         fontSize = 30.sp
                     )
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(20.dp))
 
                     DateAndWeekdayText(
                         modifier = Modifier,
@@ -104,9 +108,13 @@ fun SettingsDialog(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(20.dp))
+
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(numColumns),
-                    modifier = Modifier,
+                    columns = GridCells.Fixed(columnCount),
+                    modifier = Modifier
+                        .width(gridWidth)
+                        .fillMaxHeight(),
                     state = lazyGridState,
                     contentPadding = PaddingValues(PADDING_LIST_CONTENT_EDGE),
                     verticalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_VERTICAL),

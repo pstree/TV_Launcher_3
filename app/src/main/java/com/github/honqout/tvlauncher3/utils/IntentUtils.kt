@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
-import android.text.TextUtils
 import android.util.Log
 import android.widget.Toast
 import androidx.core.net.toUri
@@ -99,7 +98,7 @@ class IntentUtils {
          * Launch an action which is defined by system.
          */
         fun launchAction(context: Context, action: String, newTask: Boolean): LaunchIntentResult {
-            if (TextUtils.isEmpty(action)) {
+            if (action.isEmpty()) {
                 Log.e(TAG, "Cannot launch intent because the given action is empty.")
                 return LaunchIntentResult.URI_IS_EMPTY
             }
@@ -129,7 +128,7 @@ class IntentUtils {
                 if (!activityInfo.exported) {
                     Log.e(TAG, "Cannot launch activity because it is not exported.")
                     return LaunchActivityResult.NOT_EXPORTED
-                } else if (!TextUtils.isEmpty(activityInfo.permission)) {
+                } else if (!activityInfo.permission.isNullOrEmpty()) {
                     Log.e(TAG, "Activity is not exported or needs extra permission to start.")
                     return LaunchActivityResult.REQUIRE_PERMISSION
                 } else {
@@ -197,7 +196,7 @@ class IntentUtils {
          * Request to uninstall an application.
          */
         fun requestUninstallApp(context: Context, packageName: String): LaunchIntentResult {
-            if (TextUtils.isEmpty(packageName)) {
+            if (packageName.isEmpty()) {
                 Log.e(TAG, "Cannot uninstall app because the given packageName is empty.")
                 return LaunchIntentResult.URI_IS_EMPTY
             }
@@ -221,7 +220,7 @@ class IntentUtils {
             context: Context,
             packageName: String
         ): LaunchIntentResult {
-            if (TextUtils.isEmpty(packageName)) {
+            if (packageName.isEmpty()) {
                 Log.e(
                     TAG,
                     "Cannot launch Settings because the given packageName is null or empty."
@@ -242,7 +241,7 @@ class IntentUtils {
         }
 
         fun openAppInMarket(context: Context, packageName: String): LaunchIntentResult {
-            if (TextUtils.isEmpty(packageName)) {
+            if (packageName.isEmpty()) {
                 Log.e(
                     TAG,
                     "Cannot open detail page of this app in app market because the given packageName is null or empty."

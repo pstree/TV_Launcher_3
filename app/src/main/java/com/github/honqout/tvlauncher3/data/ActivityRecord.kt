@@ -1,4 +1,4 @@
-package com.github.honqout.tvlauncher3.dto
+package com.github.honqout.tvlauncher3.data
 
 import android.content.pm.ResolveInfo
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils

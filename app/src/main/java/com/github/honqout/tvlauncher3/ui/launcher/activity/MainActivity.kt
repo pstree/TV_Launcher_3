@@ -1,4 +1,4 @@
-package com.github.honqout.tvlauncher3.activity
+package com.github.honqout.tvlauncher3.ui.launcher.activity
 
 import android.os.Bundle
 import android.util.Log
@@ -70,17 +70,17 @@ import com.github.honqout.tvlauncher3.ui.theme.TabContainerColorInactive
 import com.github.honqout.tvlauncher3.ui.theme.TabContentColorActive
 import com.github.honqout.tvlauncher3.ui.theme.TabContentColorHovered
 import com.github.honqout.tvlauncher3.ui.theme.TabContentColorInactive
-import com.github.honqout.tvlauncher3.activity.viewmodel.InputViewModel
-import com.github.honqout.tvlauncher3.activity.viewmodel.LauncherViewModel
-import com.github.honqout.tvlauncher3.activity.viewmodel.TimeViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.InputViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
 import com.github.honqout.tvlauncher3.constants.NumberConstants
 import com.github.honqout.tvlauncher3.utils.DisplayUtils
 import com.github.honqout.tvlauncher3.utils.UIUtils
 import com.github.honqout.tvlauncher3.components.button.IconButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.SettingsDialog
-import com.github.honqout.tvlauncher3.components.screen.AppsScreen
-import com.github.honqout.tvlauncher3.components.screen.HomeScreen
-import com.github.honqout.tvlauncher3.components.screen.InputScreen
+import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
+import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
+import com.github.honqout.tvlauncher3.ui.launcher.screen.InputScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -98,7 +98,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Hide status bar and navigation bar
-        UIUtils.hideSystemBars(window)
+        UIUtils.handleSystemBarsVisibility(window, false)
         // Intercept back event
 
         setContent {

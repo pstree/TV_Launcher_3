@@ -1,4 +1,4 @@
-package com.github.honqout.tvlauncher3.activity.viewmodel
+package com.github.honqout.tvlauncher3.ui.launcher.viewmodel
 
 import android.app.Application
 import android.content.BroadcastReceiver
@@ -13,7 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.datastore.repository.IconRepository
 import com.github.honqout.tvlauncher3.datastore.repository.SettingsRepository
-import com.github.honqout.tvlauncher3.dto.ActivityDto
+import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.LauncherActivityType
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,7 +44,7 @@ class LauncherViewModel @Inject constructor(
     val numColumns = 5
 
     // data
-    val fixedIconList: StateFlow<List<ActivityDto?>> = iconRepository.itemsFlow
+    val fixedIconList: StateFlow<List<ActivityModel?>> = iconRepository.itemsFlow
         .map { originalList ->
             originalList.map { item ->
                 val resolveInfo = ApplicationUtils.getLauncherActivity(
@@ -53,7 +53,7 @@ class LauncherViewModel @Inject constructor(
                     item.packageName,
                     item.activityName
                 )
-                resolveInfo?.let { ActivityDto.fromResolveInfo(application, resolveInfo) }
+                resolveInfo?.let { ActivityModel.fromResolveInfo(application, resolveInfo) }
             }
         }
         .stateIn(
@@ -80,14 +80,14 @@ class LauncherViewModel @Inject constructor(
     val showAppActionDialog: StateFlow<Boolean> = _showAppActionDialog.asStateFlow()
 
     // data-related
-    private val _activityDtoList = mutableStateListOf<ActivityDto>()
-    val activityDtoList: List<ActivityDto> = _activityDtoList
+    private val _activityModelList = mutableStateListOf<ActivityModel>()
+    val activityModelList: List<ActivityModel> = _activityModelList
     private val _focusedItemIndex1 = MutableStateFlow<Int>(-1)
     val focusedItemIndex1: StateFlow<Int> = _focusedItemIndex1.asStateFlow()
     private val _focusedItemIndex2 = MutableStateFlow<Int>(-1)
     val focusedItemIndex2: StateFlow<Int> = _focusedItemIndex2.asStateFlow()
-    private val _selectedActivityDto = MutableStateFlow<ActivityDto?>(null)
-    val selectedActivityDto: StateFlow<ActivityDto?> = _selectedActivityDto.asStateFlow()
+    private val _selectedActivityModel = MutableStateFlow<ActivityModel?>(null)
+    val selectedActivityModel: StateFlow<ActivityModel?> = _selectedActivityModel.asStateFlow()
 
     // broadcast receiver
     private var localeBroadcastReceiver: BroadcastReceiver? = null
@@ -239,8 +239,8 @@ class LauncherViewModel @Inject constructor(
         viewModelScope.launch {
             activityDtoListMutex.withLock {
                 withContext(Dispatchers.Default) {
-                    _activityDtoList.clear()
-                    _activityDtoList.addAll(
+                    _activityModelList.clear()
+                    _activityModelList.addAll(
                         ApplicationUtils.getActivityDtoList(
                             getApplication(),
                             LauncherActivityType.NORMAL,
@@ -253,7 +253,7 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
-    fun setIcon(position: Int?, item: ActivityDto?) {
+    fun setIcon(position: Int?, item: ActivityModel?) {
         viewModelScope.launch {
             val targetPosition = position ?: _focusedItemIndex1.value
             if (targetPosition in 0..<IconRepository.NUM_FIXED_ACTIVITY)
@@ -301,15 +301,15 @@ class LauncherViewModel @Inject constructor(
                 withContext(Dispatchers.Default) {
                     // Save focused item
                     val focusedItem =
-                        if (_focusedItemIndex2.value in _activityDtoList.indices) {
-                            _activityDtoList[_focusedItemIndex2.value]
+                        if (_focusedItemIndex2.value in _activityModelList.indices) {
+                            _activityModelList[_focusedItemIndex2.value]
                         } else {
-                            _activityDtoList[0]
+                            _activityModelList[0]
                         }
                     // Initialize the whole list
-                    if (op == ListOp.INIT || _activityDtoList.isEmpty()) {
-                        _activityDtoList.clear()
-                        _activityDtoList.addAll(
+                    if (op == ListOp.INIT || _activityModelList.isEmpty()) {
+                        _activityModelList.clear()
+                        _activityModelList.addAll(
                             ApplicationUtils.getActivityDtoList(
                                 getApplication(),
                                 LauncherActivityType.NORMAL,
@@ -321,32 +321,32 @@ class LauncherViewModel @Inject constructor(
                     }
                     // Remove
                     if (op == ListOp.REMOVE || op == ListOp.REPLACE) {
-                        val removeResult = _activityDtoList.removeAll { activityDto ->
+                        val removeResult = _activityModelList.removeAll { activityDto ->
                             activityDto.packageName == packageName
                         }
-                        Log.i(TAG, "Removed items from ActivityDto list: $removeResult")
+                        Log.i(TAG, "Removed items from ActivityModel list: $removeResult")
                     }
                     // Add
                     if (op == ListOp.ADD || op == ListOp.REPLACE) {
-                        val addResult = _activityDtoList.addAll(
+                        val addResult = _activityModelList.addAll(
                             ApplicationUtils.getActivityDtoList(
                                 getApplication(),
                                 LauncherActivityType.NORMAL,
                                 packageName
                             ).toMutableList()
                         )
-                        Log.i(TAG, "Added items to ActivityDto list: $addResult")
+                        Log.i(TAG, "Added items to ActivityModel list: $addResult")
                         // Must sort the list after adding items
                         sortActivityDtoList()
                     }
                     // Restore focused item
                     val currentIndex =
                         if (op == ListOp.ADD || op == ListOp.REPLACE) {
-                            _activityDtoList.indexOf(focusedItem)
+                            _activityModelList.indexOf(focusedItem)
                         } else {
                             _focusedItemIndex2.value
                         }
-                    if (currentIndex in _activityDtoList.indices) {
+                    if (currentIndex in _activityModelList.indices) {
                         setFocusedItemIndex2(currentIndex)
                     } else {
                         setFocusedItemIndex2(0)
@@ -362,7 +362,7 @@ class LauncherViewModel @Inject constructor(
 
     fun sortActivityDtoList() {
         val collator: Collator = Collator.getInstance()
-        _activityDtoList.sortWith { a, b ->
+        _activityModelList.sortWith { a, b ->
             collator.compare(a.label, b.label)
         }
     }
@@ -410,8 +410,8 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
-    fun setSelectedActivityDto(newValue: ActivityDto) {
-        _selectedActivityDto.update {
+    fun setSelectedActivityDto(newValue: ActivityModel) {
+        _selectedActivityModel.update {
             newValue
         }
     }

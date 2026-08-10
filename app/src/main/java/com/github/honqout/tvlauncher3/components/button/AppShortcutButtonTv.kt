@@ -20,15 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.github.honqout.tvlauncher3.R
-import com.github.honqout.tvlauncher3.ui.theme.ButtonContainerDefault
+import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentDefault
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentFocused
-import com.github.honqout.tvlauncher3.dto.ActivityDto
 
 @Composable
 fun AppShortcutButtonTv(
     modifier: Modifier = Modifier,
-    item: ActivityDto?,
+    activityModel: ActivityModel?,
     onFocused: () -> Unit = {},
     onAddItem: () -> Unit = {},
     onStartApp: () -> Unit = {},
@@ -42,38 +41,23 @@ fun AppShortcutButtonTv(
             .wrapContentSize(Alignment.TopCenter),
         contentAlignment = Alignment.TopCenter
     ) {
-        if (item == null) {
-            RoundRectButtonTv(
-                modifier = Modifier
-                    .onFocusChanged { focusState ->
-                        if (focusState.isFocused) {
-                            onFocused()
-                        }
-                    },
-                drawableRes = R.drawable.baseline_add_24,
-                label = stringResource(R.string.add_app),
-                backgroundColor = ButtonContainerDefault,
-                contentDefaultColor = ButtonContentDefault,
-                contentFocusedColor = ButtonContentFocused,
-                onShortClick = onAddItem
-            )
-        } else {
-            ActivityButtonTv(
-                modifier = Modifier
-                    .onFocusChanged { focusState ->
-                        if (focusState.isFocused) {
-                            onFocused()
-                        }
-                    },
-                item = item,
-                contentDefaultColor = ButtonContentDefault,
-                contentFocusedColor = ButtonContentFocused,
-                onShortClick = onStartApp,
-                onLongClick = {
+        ActivityButtonTv(
+            modifier = Modifier
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        onFocused()
+                    }
+                },
+            activityModel = activityModel,
+            contentDefaultColor = ButtonContentDefault,
+            contentFocusedColor = ButtonContentFocused,
+            onShortClick = if (activityModel == null) onAddItem else onStartApp,
+            onLongClick = {
+                if (activityModel != null) {
                     expanded = true
                 }
-            )
-        }
+            }
+        )
 
         DropdownMenu(
             expanded = expanded,

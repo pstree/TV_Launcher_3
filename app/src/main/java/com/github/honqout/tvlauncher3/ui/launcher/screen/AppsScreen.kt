@@ -1,4 +1,4 @@
-package com.github.honqout.tvlauncher3.components.screen
+package com.github.honqout.tvlauncher3.ui.launcher.screen
 
 import android.util.Log
 import android.view.KeyEvent
@@ -38,10 +38,10 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.github.honqout.tvlauncher3.activity.viewmodel.LauncherViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.components.button.ActivityButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.AppActionDialog
-import com.github.honqout.tvlauncher3.dto.ActivityDto
+import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentDefault
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentFocused
 import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
@@ -64,10 +64,10 @@ fun AppsScreen(
     val topBarHeight by viewModel.topBarHeight.collectAsState()
     val showAppActionDialog by viewModel.showAppActionDialog.collectAsState()
     val focusedItemIndex by viewModel.focusedItemIndex2.collectAsState()
-    val activityDto: ActivityDto? by viewModel.selectedActivityDto.collectAsState()
+    val activityModel: ActivityModel? by viewModel.selectedActivityModel.collectAsState()
 
     val centerFocusedItem = {
-        if (focusedItemIndex in viewModel.activityDtoList.indices) {
+        if (focusedItemIndex in viewModel.activityModelList.indices) {
             val layoutInfo = lazyGridState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
@@ -100,7 +100,7 @@ fun AppsScreen(
     }
 
     val horizontalScrollToFocusedItem = {
-        if (focusedItemIndex >= 0 && focusedItemIndex < viewModel.activityDtoList.size) {
+        if (focusedItemIndex >= 0 && focusedItemIndex < viewModel.activityModelList.size) {
             val layoutInfo = lazyGridState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
@@ -218,7 +218,7 @@ fun AppsScreen(
                 horizontalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_HORIZONTAL),
                 userScrollEnabled = true
             ) {
-                itemsIndexed(viewModel.activityDtoList) { index, item ->
+                itemsIndexed(viewModel.activityModelList) { index, item ->
                     ActivityButtonTv(
                         modifier = Modifier
                             .onFocusChanged { focusState ->
@@ -227,7 +227,7 @@ fun AppsScreen(
                                     viewModel.setFocusedItemIndex2(index)
                                 }
                             },
-                        item = item,
+                        activityModel = item,
                         contentDefaultColor = ButtonContentDefault,
                         contentFocusedColor = ButtonContentFocused,
                         onShortClick = {
@@ -251,7 +251,7 @@ fun AppsScreen(
         }
 
         AnimatedVisibility(
-            visible = showAppActionDialog && activityDto != null,
+            visible = showAppActionDialog && activityModel != null,
             enter = scaleIn(
                 initialScale = 0.8f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
@@ -259,7 +259,7 @@ fun AppsScreen(
             exit = scaleOut(targetScale = 0.8f) + fadeOut()
         ) {
             AppActionDialog(
-                item = activityDto!!,
+                item = activityModel!!,
                 onDismissRequest = {
                     viewModel.setShowAppActionScreen(false)
                 },

@@ -22,12 +22,12 @@ import androidx.compose.ui.unit.dp
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentDefault
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentFocused
-import com.github.honqout.tvlauncher3.dto.ActivityDto
+import com.github.honqout.tvlauncher3.data.ActivityModel
 
 @Composable
 fun AppShortcutButton(
     modifier: Modifier = Modifier,
-    item: ActivityDto?,
+    item: ActivityModel?,
     onFocused: () -> Unit = {},
     onAddItem: () -> Unit = {},
     onStartApp: () -> Unit = {},
