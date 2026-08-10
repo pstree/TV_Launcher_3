@@ -88,7 +88,6 @@ fun HomeScreen(
                     key = { index, item -> "key_${index}_${item?.packageName}_${item?.activityName}" }
                 ) { index, item ->
                     AppShortcutButtonTv(
-                        modifier = Modifier,
                         activityModel = item,
                         onFocused = {
                             viewModel.setFocusedItemIndex1(index)

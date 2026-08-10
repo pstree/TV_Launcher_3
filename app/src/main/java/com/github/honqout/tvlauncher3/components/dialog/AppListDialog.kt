@@ -135,7 +135,6 @@ fun AppListDialog(
                     .fillMaxWidth()
                     .background(color = Color.Transparent)
                     .focusable(false)
-                    //.focusRequester(focusRequester0)
                     .weight(weight = 1.0f)
                     .onKeyEvent { keyEvent ->
                         when (keyEvent.key) {
