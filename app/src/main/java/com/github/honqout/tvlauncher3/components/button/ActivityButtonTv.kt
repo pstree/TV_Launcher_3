@@ -1,5 +1,7 @@
 package com.github.honqout.tvlauncher3.components.button
 
+import android.graphics.drawable.Drawable
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -28,6 +30,7 @@ import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 fun ActivityButtonTv(
     modifier: Modifier = Modifier,
     activityModel: ActivityModel?,
+    defaultIcon: Drawable,
     contentDefaultColor: Color = colorScheme.secondary,
     contentFocusedColor: Color = colorScheme.primary,
     onShortClick: () -> Unit = {},
@@ -38,7 +41,7 @@ fun ActivityButtonTv(
     val imageRequest = remember(activityModel?.getKey()) {
         if (activityModel == null) {
             ImageRequest.Builder(context)
-                .data(R.drawable.baseline_add_24)
+                .data(defaultIcon)
                 .build()
         } else {
             ImageRequest.Builder(context)
@@ -51,8 +54,74 @@ fun ActivityButtonTv(
                 .precision(Precision.INEXACT)
                 .allowHardware(true)
                 .crossfade(false)
-                .placeholder(R.drawable.baseline_add_24)
-                .error(R.drawable.baseline_add_24)
+                .placeholder(defaultIcon)
+                .error(defaultIcon)
+                .build()
+        }
+    }
+
+    RoundRectButtonTv(
+        modifier = modifier,
+        icon = {
+            if (activityModel == null) {
+                IconFromDrawableTv(
+                    drawable = defaultIcon,
+                    contentDescription = null
+                )
+            } else {
+                AsyncImage(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            if (activityModel.iconType == ApplicationUtils.Companion.IconType.Banner) 0.dp
+                            else 10.dp
+                        ),
+                    model = imageRequest,
+                    contentDescription = activityModel.label,
+                    contentScale = if (activityModel.iconType == ApplicationUtils.Companion.IconType.Banner)
+                        ContentScale.FillBounds else ContentScale.Fit,
+                )
+            }
+        },
+        label = activityModel?.label ?: stringResource(R.string.add_app),
+        backgroundColor = if (activityModel == null) ButtonContainerDefault else Color(activityModel.color),
+        contentDefaultColor = contentDefaultColor,
+        contentFocusedColor = contentFocusedColor,
+        onShortClick = onShortClick,
+        onLongClick = onLongClick
+    )
+}
+
+@Composable
+fun ActivityButtonTv(
+    modifier: Modifier = Modifier,
+    activityModel: ActivityModel?,
+    @DrawableRes defaultIconRes: Int,
+    contentDefaultColor: Color = colorScheme.secondary,
+    contentFocusedColor: Color = colorScheme.primary,
+    onShortClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
+) {
+    val context = LocalContext.current
+
+    val imageRequest = remember(activityModel?.getKey()) {
+        if (activityModel == null) {
+            ImageRequest.Builder(context)
+                .data(defaultIconRes)
+                .build()
+        } else {
+            ImageRequest.Builder(context)
+                .data(
+                    ActivityIconModel(
+                        activityModel.packageName,
+                        activityModel.activityName
+                    )
+                )
+                .precision(Precision.INEXACT)
+                .allowHardware(true)
+                .crossfade(false)
+                .placeholder(defaultIconRes)
+                .error(defaultIconRes)
                 .build()
         }
     }
@@ -62,7 +131,7 @@ fun ActivityButtonTv(
         icon = {
             if (activityModel == null) {
                 IconFromResourceTv(
-                    drawableRes = R.drawable.baseline_add_24,
+                    drawableRes = defaultIconRes,
                     contentDescription = null
                 )
             } else {

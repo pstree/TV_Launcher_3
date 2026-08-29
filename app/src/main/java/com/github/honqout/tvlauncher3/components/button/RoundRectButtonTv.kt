@@ -1,5 +1,6 @@
 package com.github.honqout.tvlauncher3.components.button
 
+import android.graphics.drawable.Drawable
 import android.view.KeyEvent
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
@@ -36,6 +37,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_LARGE
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
 @Composable
 private fun RoundRectButtonTvImpl(
@@ -142,6 +144,20 @@ fun RoundRectButtonTv(
         onShortClick = onShortClick,
         onLongClick = onLongClick,
         onMenuOpen = onMenuOpen
+    )
+}
+
+@Composable
+fun IconFromDrawableTv(
+    drawable: Drawable,
+    contentDescription: String?
+) {
+    Image(
+        painter = rememberDrawablePainter(drawable = drawable),
+        contentDescription = contentDescription,
+        modifier = Modifier
+            .requiredSize(width = 75.dp, height = 75.dp),
+        contentScale = ContentScale.Fit
     )
 }
 

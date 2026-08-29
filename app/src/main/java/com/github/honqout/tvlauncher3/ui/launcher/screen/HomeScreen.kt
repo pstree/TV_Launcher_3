@@ -73,7 +73,7 @@ fun HomeScreen(
                     )
                     .onFocusChanged { focusState ->
                         if (!focusState.hasFocus) {
-                            viewModel.setFocusedItemIndex1(-1)
+                            viewModel.setFocusedFixedIconIndex(-1)
                         }
                     }
                     .focusable(false),
@@ -90,10 +90,10 @@ fun HomeScreen(
                     AppShortcutButtonTv(
                         activityModel = item,
                         onFocused = {
-                            viewModel.setFocusedItemIndex1(index)
+                            viewModel.setFocusedFixedIconIndex(index)
                         },
                         onAddItem = {
-                            viewModel.setFocusedItemIndex1(index)
+                            viewModel.setFocusedFixedIconIndex(index)
                             viewModel.setShowAppListScreen(true)
                         },
                         onStartApp = {
@@ -116,7 +116,7 @@ fun HomeScreen(
                             )
                         },
                         onReplaceItem = {
-                            viewModel.setFocusedItemIndex1(index)
+                            viewModel.setFocusedFixedIconIndex(index)
                             viewModel.setShowAppListScreen(true)
                         }
                     )
@@ -131,10 +131,10 @@ fun HomeScreen(
         ) {
             AppListDialog(
                 viewModel = viewModel,
-                onItemChosen = { _, activityDto ->
+                onItemChosen = { _, activityModel ->
                     viewModel.setIcon(
                         position = null,
-                        item = activityDto
+                        item = activityModel
                     )
                 },
                 onDismissRequest = {

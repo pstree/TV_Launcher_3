@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,10 +42,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.R
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.components.button.ActivityButtonTv
 import com.github.honqout.tvlauncher3.data.ActivityModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentDefault
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentFocused
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
@@ -60,13 +62,15 @@ fun AppListDialog(
     onDismissRequest: () -> Unit = {}
 ) {
     val tag = "AppListDialog"
+    val context = LocalContext.current
     val numColumns = 5
+    val activityModelList by viewModel.activityModelList.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val lazyGridState = rememberLazyGridState()
     var focusedItemIndex by remember { mutableIntStateOf(0) }
 
     val centerFocusedItem = {
-        if (focusedItemIndex in viewModel.activityModelList.indices) {
+        if (focusedItemIndex in activityModelList.indices) {
             val layoutInfo = lazyGridState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
@@ -181,14 +185,18 @@ fun AppListDialog(
 
                                     KeyEvent.ACTION_UP -> {
                                         Log.i(tag, "Released key: DirectionLeft")
-                                        if (focusedItemIndex >= 0 && focusedItemIndex < viewModel.activityModelList.size) {
+                                        if (focusedItemIndex >= 0
+                                            && focusedItemIndex < activityModelList.size
+                                        ) {
                                             val layoutInfo = lazyGridState.layoutInfo
                                             val visibleItems = layoutInfo.visibleItemsInfo
                                             if (visibleItems.isNotEmpty()) {
                                                 val firstVisibleItem = visibleItems.first()
                                                 val focusedItemIndexOffset =
                                                     focusedItemIndex - firstVisibleItem.index
-                                                if (focusedItemIndexOffset < 0 || focusedItemIndexOffset >= visibleItems.size) {
+                                                if (focusedItemIndexOffset < 0
+                                                    || focusedItemIndexOffset >= visibleItems.size
+                                                ) {
                                                     coroutineScope.launch {
                                                         lazyGridState.animateScrollToItem(
                                                             focusedItemIndex
@@ -213,14 +221,18 @@ fun AppListDialog(
 
                                     KeyEvent.ACTION_UP -> {
                                         Log.i(tag, "Released key: DirectionRight")
-                                        if (focusedItemIndex >= 0 && focusedItemIndex < viewModel.activityModelList.size) {
+                                        if (focusedItemIndex >= 0
+                                            && focusedItemIndex < activityModelList.size
+                                        ) {
                                             val layoutInfo = lazyGridState.layoutInfo
                                             val visibleItems = layoutInfo.visibleItemsInfo
                                             if (visibleItems.isNotEmpty()) {
                                                 val firstVisibleItem = visibleItems.first()
                                                 val focusedItemIndexOffset =
                                                     focusedItemIndex - firstVisibleItem.index
-                                                if (focusedItemIndexOffset < 0 || focusedItemIndexOffset >= visibleItems.size) {
+                                                if (focusedItemIndexOffset < 0
+                                                    || focusedItemIndexOffset >= visibleItems.size
+                                                ) {
                                                     coroutineScope.launch {
                                                         lazyGridState.animateScrollToItem(
                                                             focusedItemIndex
@@ -245,9 +257,7 @@ fun AppListDialog(
                 horizontalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_HORIZONTAL),
                 userScrollEnabled = true
             ) {
-                itemsIndexed(
-                    viewModel.activityModelList
-                ) { index, item ->
+                itemsIndexed(activityModelList) { index, item ->
                     val focusRequester = remember { FocusRequester() }
 
                     ActivityButtonTv(
@@ -261,6 +271,7 @@ fun AppListDialog(
                                 }
                             },
                         activityModel = item,
+                        defaultIcon = context.packageManager.defaultActivityIcon,
                         contentDefaultColor = ButtonContentDefault,
                         contentFocusedColor = ButtonContentFocused,
                         onShortClick = {

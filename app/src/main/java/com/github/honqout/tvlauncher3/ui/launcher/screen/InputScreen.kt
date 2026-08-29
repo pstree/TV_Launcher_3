@@ -56,10 +56,11 @@ fun InputScreen(
     val coroutineScope = rememberCoroutineScope()
     val lazyGridState = rememberLazyGridState()
     val topBarHeight by viewModel.topBarHeight.collectAsState()
+    val tvInputList by viewModel.tvInputList.collectAsState()
     val focusedItemIndex by viewModel.focusedItemIndex.collectAsState()
 
     val centerFocusedItem = {
-        if (focusedItemIndex in viewModel.tvInputList.indices) {
+        if (focusedItemIndex in tvInputList.indices) {
             val layoutInfo = lazyGridState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
@@ -166,7 +167,7 @@ fun InputScreen(
                     horizontalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_HORIZONTAL),
                     userScrollEnabled = true
                 ) {
-                    itemsIndexed(viewModel.tvInputList) { index, item ->
+                    itemsIndexed(tvInputList) { index, item ->
                         TvInputButton(
                             modifier = Modifier,
                             index = index,

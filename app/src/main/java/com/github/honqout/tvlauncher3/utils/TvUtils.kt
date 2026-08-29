@@ -12,9 +12,15 @@ class TvUtils {
         private const val TAG: String = "TvUtils"
 
         fun getTvInputList(context: Context): List<TvInputInfo> {
-            val tvInputManager =
-                context.getSystemService(Context.TV_INPUT_SERVICE) as? TvInputManager
-            return tvInputManager?.tvInputList ?: emptyList()
+            val appContext = context.applicationContext
+            return try {
+                val tvInputManager =
+                    appContext.getSystemService(Context.TV_INPUT_SERVICE) as? TvInputManager
+                tvInputManager?.tvInputList ?: emptyList()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get TV input list.", e)
+                emptyList()
+            }
         }
 
         fun switchToTvInputSource(context: Context, tvInputInfo: TvInputInfo): Boolean {
@@ -27,7 +33,7 @@ class TvUtils {
                 context.startActivity(intent)
                 true
             }.getOrElse {
-                Log.e(TAG, "Cannot switch to TV input source.", it)
+                Log.e(TAG, "Failed to switch to TV input source.", it)
                 false
             }
         }

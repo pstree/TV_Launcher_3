@@ -7,6 +7,8 @@ import androidx.datastore.dataStore
 import com.github.honqout.tvlauncher3.IconItem
 import com.github.honqout.tvlauncher3.IconItems
 import com.github.honqout.tvlauncher3.datastore.serializer.IconItemsSerializer
+import com.github.honqout.tvlauncher3.utils.ApplicationUtils
+import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.LauncherActivityType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -82,14 +84,12 @@ class IconRepository @Inject constructor(
     }
 
     /**
-     * Reset icon on the specified position
+     * Reset icons on the specified positions.
      */
-    suspend fun resetIconByIndex(position: Int) {
-        require(position in 0..<NUM_FIXED_ACTIVITY)
-
+    suspend fun resetIconsByIndex(positions: List<Int>) {
         dataStore.updateData { currentData ->
             val updatedList = currentData.itemsList.mapIndexed { index, item ->
-                if (index == position) {
+                if (index in positions) {
                     item.toBuilder()
                         .setPackageName("")
                         .setActivityName("")
@@ -99,6 +99,45 @@ class IconRepository @Inject constructor(
                 }
             }
             IconItems.newBuilder().addAllItems(updatedList).build()
+        }
+    }
+
+    /**
+     * Reset icon with the specified packageName.
+     */
+    suspend fun resetIconAfterPackageRemoved(packageName: String) {
+        dataStore.updateData { currentData ->
+            val updatedList = currentData.itemsList.map { item ->
+                if (item.packageName == packageName) {
+                    createEmptyIcon(item.index)
+                } else {
+                    item
+                }
+            }
+            IconItems.newBuilder().clearItems().addAllItems(updatedList).build()
+        }
+    }
+
+    /**
+     * Reset icon with the specified packageName which is invalid.
+     */
+    suspend fun resetIconAfterPackageReplaced(context: Context, packageName: String) {
+        dataStore.updateData { currentData ->
+            val updatedList = currentData.itemsList.map { item ->
+                if (item.packageName == packageName) {
+                    val resolveInfo = ApplicationUtils.getLauncherActivity(
+                        context,
+                        LauncherActivityType.NORMAL,
+                        item.packageName,
+                        item.activityName
+                    )
+                    if (resolveInfo == null) {
+                        createEmptyIcon(item.index)
+                    }
+                }
+                item
+            }
+            IconItems.newBuilder().clearItems().addAllItems(updatedList).build()
         }
     }
 

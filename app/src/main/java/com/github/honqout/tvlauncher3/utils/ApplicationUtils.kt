@@ -453,7 +453,7 @@ class ApplicationUtils {
          *                    null or empty string ("") to get all ActivityDtos of all installed
          *                    packages.
          */
-        fun getActivityDtoList(
+        fun getActivityModelList(
             context: Context,
             type: LauncherActivityType,
             packageName: String?

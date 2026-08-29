@@ -8,6 +8,7 @@ compose-bom = "2026.06.00"
 core-ktx = "1.18.0"
 core-splashscreen = "1.0.0"
 datastore = "1.2.1"
+drawablepainter = "0.37.3"
 espresso-core = "3.7.0"
 gson = "2.14.0"
 hilt = "2.60.1"
@@ -22,7 +23,7 @@ lifecycle-runtime-ktx = "2.10.0"
 lifecycle-viewmodel-compose = "2.10.0"
 navigation-compose = "2.9.8"
 palette = "1.0.0"
-protobuf = "4.35.1"
+protobuf = "4.36.0"
 protobuf-plugin = "0.10.0"
 room = "2.8.4"
 tv-foundation = "1.0.0"
@@ -61,6 +62,7 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-tv-foundation = { group = "androidx.tv", name = "tv-foundation", version.ref = "tv-foundation" }
 androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tv-material" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
+drawablepainter = { group = "com.google.accompanist", name = "accompanist-drawablepainter", version.ref = "drawablepainter" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-android-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }

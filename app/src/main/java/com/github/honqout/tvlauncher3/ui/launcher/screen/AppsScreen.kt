@@ -38,6 +38,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.components.button.ActivityButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.AppActionDialog
@@ -63,11 +64,12 @@ fun AppsScreen(
     val numColumns = viewModel.numColumns
     val topBarHeight by viewModel.topBarHeight.collectAsState()
     val showAppActionDialog by viewModel.showAppActionDialog.collectAsState()
-    val focusedItemIndex by viewModel.focusedItemIndex2.collectAsState()
+    val activityModelList by viewModel.activityModelList.collectAsStateWithLifecycle()
+    val focusedItemIndex by viewModel.focusedActivityItemIndex.collectAsState()
     val activityModel: ActivityModel? by viewModel.selectedActivityModel.collectAsState()
 
     val centerFocusedItem = {
-        if (focusedItemIndex in viewModel.activityModelList.indices) {
+        if (focusedItemIndex in activityModelList.indices) {
             val layoutInfo = lazyGridState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
@@ -100,7 +102,7 @@ fun AppsScreen(
     }
 
     val horizontalScrollToFocusedItem = {
-        if (focusedItemIndex >= 0 && focusedItemIndex < viewModel.activityModelList.size) {
+        if (focusedItemIndex >= 0 && focusedItemIndex < activityModelList.size) {
             val layoutInfo = lazyGridState.layoutInfo
             val visibleItems = layoutInfo.visibleItemsInfo
             if (visibleItems.isNotEmpty()) {
@@ -218,17 +220,18 @@ fun AppsScreen(
                 horizontalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_HORIZONTAL),
                 userScrollEnabled = true
             ) {
-                itemsIndexed(viewModel.activityModelList) { index, item ->
+                itemsIndexed(activityModelList) { index, item ->
                     ActivityButtonTv(
                         modifier = Modifier
                             .fillMaxSize()
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused) {
                                     Log.i(tag, "FocusedItemIndex: $index")
-                                    viewModel.setFocusedItemIndex2(index)
+                                    viewModel.setFocusedActivityItemIndex(index)
                                 }
                             },
                         activityModel = item,
+                        defaultIcon = context.packageManager.defaultActivityIcon,
                         contentDefaultColor = ButtonContentDefault,
                         contentFocusedColor = ButtonContentFocused,
                         onShortClick = {
@@ -243,7 +246,7 @@ fun AppsScreen(
                             )
                         },
                         onLongClick = {
-                            viewModel.setSelectedActivityDto(item)
+                            viewModel.setSelectedActivityModel(item)
                             viewModel.setShowAppActionScreen(true)
                         }
                     )

@@ -58,6 +58,7 @@ fun AppShortcutButtonTv(
                     buttonWidth = coordinates.size.width
                 },
             activityModel = activityModel,
+            defaultIconRes = R.drawable.baseline_add_24,
             contentDefaultColor = ButtonContentDefault,
             contentFocusedColor = ButtonContentFocused,
             onShortClick = if (activityModel == null) onAddItem else onStartApp,

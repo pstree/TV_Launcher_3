@@ -50,6 +50,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -62,6 +63,15 @@ import androidx.tv.material3.TabRow
 import androidx.tv.material3.TabRowDefaults
 import androidx.tv.material3.Text
 import com.github.honqout.tvlauncher3.R
+import com.github.honqout.tvlauncher3.components.button.IconButtonTv
+import com.github.honqout.tvlauncher3.components.dialog.SettingsDialog
+import com.github.honqout.tvlauncher3.constants.NumberConstants
+import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
+import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
+import com.github.honqout.tvlauncher3.ui.launcher.screen.InputScreen
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.InputViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_MEDIUM
 import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
 import com.github.honqout.tvlauncher3.ui.theme.TVLauncher3Theme
@@ -70,17 +80,8 @@ import com.github.honqout.tvlauncher3.ui.theme.TabContainerColorInactive
 import com.github.honqout.tvlauncher3.ui.theme.TabContentColorActive
 import com.github.honqout.tvlauncher3.ui.theme.TabContentColorHovered
 import com.github.honqout.tvlauncher3.ui.theme.TabContentColorInactive
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.InputViewModel
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
-import com.github.honqout.tvlauncher3.constants.NumberConstants
 import com.github.honqout.tvlauncher3.utils.DisplayUtils
 import com.github.honqout.tvlauncher3.utils.UIUtils
-import com.github.honqout.tvlauncher3.components.button.IconButtonTv
-import com.github.honqout.tvlauncher3.components.dialog.SettingsDialog
-import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
-import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
-import com.github.honqout.tvlauncher3.ui.launcher.screen.InputScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -99,7 +100,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Hide status bar and navigation bar
         UIUtils.handleSystemBarsVisibility(window, false)
-        // Intercept back event
 
         setContent {
             DisposableEffect(Unit) {
@@ -125,6 +125,8 @@ class MainActivity : ComponentActivity() {
             }
 
             TVLauncher3Theme {
+                val configuration = LocalConfiguration.current
+
                 val tabs = launcherViewModel.tabs
                 val showSettingsDialog by launcherViewModel.showSettingsDialog.collectAsState()
                 val selectedTabIndex by launcherViewModel.selectedTabIndex.collectAsState()
@@ -132,6 +134,10 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     delay(100.milliseconds)
+                    // Handle config changes
+                    launcherViewModel.onConfigChanged(configuration)
+                    inputViewModel.onConfigChanged(configuration)
+                    // Request focus
                     focusRequester.requestFocus()
                     Log.i(TAG, "Focused TabRow.")
                 }
