@@ -15,6 +15,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
@@ -39,7 +40,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +50,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -61,10 +66,12 @@ import androidx.tv.material3.TabDefaults
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.TabRowDefaults
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.components.button.IconButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.SettingsDialog
 import com.github.honqout.tvlauncher3.constants.NumberConstants
+import com.github.honqout.tvlauncher3.data.DailyWallpaper
 import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.FilesScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
@@ -82,6 +89,7 @@ import com.github.honqout.tvlauncher3.ui.theme.TabContentColorInactive
 import com.github.honqout.tvlauncher3.utils.DisplayUtils
 import com.github.honqout.tvlauncher3.utils.UIUtils
 import dagger.hilt.android.AndroidEntryPoint
+import java.io.File
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -130,6 +138,14 @@ class MainActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle()
                 val focusRequester = remember { FocusRequester() }
 
+                var wallpaperFile by remember { mutableStateOf<File?>(null) }
+                val appContext = LocalContext.current.applicationContext
+                LaunchedEffect(Unit) {
+                    // Refresh the background once per day. While offline, or before the
+                    // first successful download, the bundled fallback image is used.
+                    wallpaperFile = DailyWallpaper.ensureUpToDate(appContext)
+                }
+
 
                 LaunchedEffect(Unit) {
                     delay(100.milliseconds)
@@ -146,6 +162,25 @@ class MainActivity : ComponentActivity() {
                         .windowInsetsPadding(WindowInsets.systemBars)
                         .background(Color.Transparent)
                 ) {
+                    // The box ships without a system wallpaper image: draw the cached daily
+                    // wallpaper when available, otherwise a bundled fallback.
+                    val cachedWallpaper = wallpaperFile
+                    if (cachedWallpaper != null) {
+                        AsyncImage(
+                            model = cachedWallpaper,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.wallpaper_bg),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    }
+
                     Row(
                         modifier = Modifier
                             .wrapContentHeight()

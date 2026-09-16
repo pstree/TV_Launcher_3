@@ -17,17 +17,27 @@ kotlin {
 
 configure<ApplicationExtension> {
     namespace = "com.github.honqout.tvlauncher3"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.github.honqout.tvlauncher3"
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 9
         versionName = "1.1.7"
 
         ndk {
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            // 本地调试密钥：release 包需要签名才能 adb install 到电视设备。
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
@@ -38,6 +48,7 @@ configure<ApplicationExtension> {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
