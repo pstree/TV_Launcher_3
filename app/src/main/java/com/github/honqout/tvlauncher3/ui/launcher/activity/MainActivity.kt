@@ -1,6 +1,12 @@
 package com.github.honqout.tvlauncher3.ui.launcher.activity
 
+import android.app.WallpaperManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.TextClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -42,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +57,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -59,6 +68,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Tab
@@ -66,12 +78,10 @@ import androidx.tv.material3.TabDefaults
 import androidx.tv.material3.TabRow
 import androidx.tv.material3.TabRowDefaults
 import androidx.tv.material3.Text
-import coil3.compose.AsyncImage
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.components.button.IconButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.SettingsDialog
 import com.github.honqout.tvlauncher3.constants.NumberConstants
-import com.github.honqout.tvlauncher3.data.DailyWallpaper
 import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.FilesScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
@@ -89,12 +99,18 @@ import com.github.honqout.tvlauncher3.ui.theme.TabContentColorInactive
 import com.github.honqout.tvlauncher3.utils.DisplayUtils
 import com.github.honqout.tvlauncher3.utils.UIUtils
 import dagger.hilt.android.AndroidEntryPoint
-import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        private const val TAG = "TVLauncher3"
+    }
 
     private val timeViewModel: TimeViewModel by viewModels()
     private val launcherViewModel: LauncherViewModel by viewModels()
@@ -138,12 +154,80 @@ class MainActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle()
                 val focusRequester = remember { FocusRequester() }
 
-                var wallpaperFile by remember { mutableStateOf<File?>(null) }
+                var wallpaperBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
                 val appContext = LocalContext.current.applicationContext
+                val scope = rememberCoroutineScope()
+                val loadWallpaper: () -> Unit = {
+                    scope.launch {
+                        wallpaperBitmap = withContext(Dispatchers.IO) {
+                            runCatching {
+                                // 将系统壁纸绘制为位图;无壁纸或读取失败时返回 null,由内置默认壁纸兜底
+                                val wm = WallpaperManager.getInstance(appContext)
+                                var bitmap: Bitmap? = null
+                                try {
+                                    val drawable = wm.drawable
+                                    if (drawable != null) {
+                                        val metrics = appContext.resources.displayMetrics
+                                        bitmap = Bitmap.createBitmap(
+                                            metrics.widthPixels,
+                                            metrics.heightPixels,
+                                            Bitmap.Config.ARGB_8888
+                                        )
+                                        val canvas = Canvas(bitmap)
+                                        drawable.setBounds(0, 0, bitmap.width, bitmap.height)
+                                        drawable.draw(canvas)
+                                        Log.i(TAG, "wallpaper loaded from drawable")
+                                    } else {
+                                        Log.w(TAG, "wm.drawable is null")
+                                    }
+                                } catch (t: Throwable) {
+                                    Log.w(TAG, "load from drawable failed", t)
+                                }
+                                if (bitmap == null) {
+                                    // 兜底:直接读取系统壁纸文件
+                                    try {
+                                        val fd = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                            wm.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)
+                                        } else {
+                                            null
+                                        }
+                                        if (fd != null) {
+                                            fd.use { pfd ->
+                                                bitmap = BitmapFactory.decodeFileDescriptor(
+                                                    pfd.fileDescriptor
+                                                )
+                                            }
+                                            Log.i(
+                                                TAG,
+                                                "wallpaper loaded from file ${bitmap?.width}x${bitmap?.height}"
+                                            )
+                                        } else {
+                                            Log.w(TAG, "wallpaper file is null")
+                                        }
+                                    } catch (t: Throwable) {
+                                        Log.w(TAG, "load from file failed", t)
+                                    }
+                                }
+                                bitmap?.asImageBitmap()
+                            }.getOrNull().also { loaded ->
+                                Log.i(TAG, "system wallpaper available: ${loaded != null}")
+                            }
+                        }
+                    }
+                }
                 LaunchedEffect(Unit) {
-                    // Refresh the background once per day. While offline, or before the
-                    // first successful download, the bundled fallback image is used.
-                    wallpaperFile = DailyWallpaper.ensureUpToDate(appContext)
+                    loadWallpaper()
+                }
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    // 每次回到桌面时重新加载系统壁纸,系统设置中换壁纸后立即生效
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            loadWallpaper()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
 
@@ -162,12 +246,11 @@ class MainActivity : ComponentActivity() {
                         .windowInsetsPadding(WindowInsets.systemBars)
                         .background(Color.Transparent)
                 ) {
-                    // The box ships without a system wallpaper image: draw the cached daily
-                    // wallpaper when available, otherwise a bundled fallback.
-                    val cachedWallpaper = wallpaperFile
-                    if (cachedWallpaper != null) {
-                        AsyncImage(
-                            model = cachedWallpaper,
+                    // 优先展示系统壁纸;获取不到时使用内置默认壁纸
+                    val systemWallpaper = wallpaperBitmap
+                    if (systemWallpaper != null) {
+                        Image(
+                            bitmap = systemWallpaper,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.matchParentSize()
