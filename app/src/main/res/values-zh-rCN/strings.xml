@@ -5,7 +5,7 @@
     <!-- Title -->
     <string name="home">主页</string>
     <string name="apps">应用</string>
-    <string name="input">输入</string>
+    <string name="files">文件</string>
     <string name="settings">设置</string>
 
     <!-- Shortcut operation -->
@@ -32,6 +32,13 @@
     <string name="sound">声音</string>
     <string name="display">显示</string>
     <string name="screen_saver">屏保</string>
+
+    <!-- Files -->
+    <string name="internal_storage">内置存储</string>
+    <string name="files_permission_title">需要所有文件访问权限</string>
+    <string name="files_permission_message">要浏览本设备上的文件,请授予「所有文件访问权限」。</string>
+    <string name="grant">去授权</string>
+    <string name="cancel">取消</string>
 
     <!-- Hint -->
     <string name="activity_belongs_to">“%s”属于以下应用：</string>

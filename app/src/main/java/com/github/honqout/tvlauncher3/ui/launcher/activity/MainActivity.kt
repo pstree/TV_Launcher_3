@@ -67,11 +67,12 @@ import com.github.honqout.tvlauncher3.components.button.IconButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.SettingsDialog
 import com.github.honqout.tvlauncher3.constants.NumberConstants
 import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
+import com.github.honqout.tvlauncher3.ui.launcher.screen.FilesScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
-import com.github.honqout.tvlauncher3.ui.launcher.screen.InputScreen
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.InputViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.WallpaperViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_MEDIUM
 import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
 import com.github.honqout.tvlauncher3.ui.theme.TVLauncher3Theme
@@ -94,7 +95,8 @@ class MainActivity : ComponentActivity() {
 
     private val timeViewModel: TimeViewModel by viewModels()
     private val launcherViewModel: LauncherViewModel by viewModels()
-    private val inputViewModel: InputViewModel by viewModels()
+    private val filesViewModel: FilesViewModel by viewModels()
+    private val wallpaperViewModel: WallpaperViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -136,7 +138,7 @@ class MainActivity : ComponentActivity() {
                     delay(100.milliseconds)
                     // Handle config changes
                     launcherViewModel.onConfigChanged(configuration)
-                    inputViewModel.onConfigChanged(configuration)
+                    filesViewModel.onConfigChanged(configuration)
                     // Request focus
                     focusRequester.requestFocus()
                     Log.i(TAG, "Focused TabRow.")
@@ -156,7 +158,7 @@ class MainActivity : ComponentActivity() {
                             .onSizeChanged { intSize ->
                                 val heightDp = DisplayUtils.pixelToDp(baseContext, intSize.height)
                                 launcherViewModel.setTopBarHeight(heightDp)
-                                inputViewModel.setTopBarHeight(heightDp)
+                                filesViewModel.setTopBarHeight(heightDp)
                             },
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
@@ -292,7 +294,7 @@ class MainActivity : ComponentActivity() {
                         when (selectedTabIndex) {
                             0 -> HomeScreen(viewModel = launcherViewModel)
                             1 -> AppsScreen(viewModel = launcherViewModel)
-                            2 -> InputScreen(viewModel = inputViewModel)
+                            2 -> FilesScreen(viewModel = filesViewModel)
                             else -> launcherViewModel.setSelectedTabIndex(0)
                         }
                     }

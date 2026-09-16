@@ -45,7 +45,7 @@ class LauncherViewModel @Inject constructor(
     val tabs = listOf(
         Pair(R.drawable.baseline_home_24, R.string.home),
         Pair(R.drawable.baseline_apps_24, R.string.apps),
-        Pair(R.drawable.baseline_input_24, R.string.input)
+        Pair(R.drawable.baseline_folder_24, R.string.files)
     )
     private var oldConfig: Configuration? = null
     private val _topBarHeight = MutableStateFlow<Int>(0)

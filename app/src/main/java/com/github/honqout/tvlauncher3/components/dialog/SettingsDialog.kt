@@ -127,10 +127,14 @@ fun SettingsDialog(
                             contentDescriptionRes = R.string.settings,
                             titleRes = R.string.settings,
                             onShortClick = {
-                                IntentUtils.launchAction(
+                                IntentUtils.handleLaunchActivityResult(
                                     context,
-                                    Settings.ACTION_SETTINGS,
-                                    true
+                                    IntentUtils.launchActivity(
+                                        context,
+                                        "com.android.settings",
+                                        "com.android.settings.Settings",
+                                        true
+                                    )
                                 )
                             }
                         )
