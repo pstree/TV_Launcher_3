@@ -119,23 +119,22 @@ class IconRepository @Inject constructor(
     }
 
     /**
-     * Reset icon with the specified packageName which is invalid.
+     * Reset the icons belonging to [packageName] if the recorded activity is no longer a valid
+     * launcher activity of that package (e.g. it was renamed or removed by an update).
      */
     suspend fun resetIconAfterPackageReplaced(context: Context, packageName: String) {
         dataStore.updateData { currentData ->
             val updatedList = currentData.itemsList.map { item ->
-                if (item.packageName == packageName) {
-                    val resolveInfo = ApplicationUtils.getLauncherActivity(
-                        context,
-                        LauncherActivityType.NORMAL,
-                        item.packageName,
-                        item.activityName
-                    )
-                    if (resolveInfo == null) {
-                        createEmptyIcon(item.index)
-                    }
+                if (item.packageName != packageName) {
+                    return@map item
                 }
-                item
+                val resolveInfo = ApplicationUtils.getLauncherActivity(
+                    context,
+                    LauncherActivityType.NORMAL,
+                    item.packageName,
+                    item.activityName
+                )
+                if (resolveInfo == null) createEmptyIcon(item.index) else item
             }
             IconItems.newBuilder().clearItems().addAllItems(updatedList).build()
         }

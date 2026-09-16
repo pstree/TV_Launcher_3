@@ -20,14 +20,13 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.components.button.AppShortcutButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.AppListDialog
@@ -45,9 +44,9 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val lazyGridState = rememberLazyGridState()
-    val topBarHeight by viewModel.topBarHeight.collectAsState()
-    val showAppListDialog by viewModel.showAppListDialog.collectAsState()
-    val fixedIconList by viewModel.fixedIconList.collectAsState()
+    val topBarHeight by viewModel.topBarHeight.collectAsStateWithLifecycle()
+    val showAppListDialog by viewModel.showAppListDialog.collectAsStateWithLifecycle()
+    val fixedIconList by viewModel.fixedIconList.collectAsStateWithLifecycle()
 
     Box(
         modifier = Modifier
@@ -71,11 +70,6 @@ fun HomeScreen(
                         color = OnWallpaperContainer,
                         shape = RoundedCornerShape(16.dp)
                     )
-                    .onFocusChanged { focusState ->
-                        if (!focusState.hasFocus) {
-                            viewModel.setFocusedFixedIconIndex(-1)
-                        }
-                    }
                     .focusable(false),
                 state = lazyGridState,
                 contentPadding = PaddingValues(PADDING_LIST_CONTENT_EDGE),

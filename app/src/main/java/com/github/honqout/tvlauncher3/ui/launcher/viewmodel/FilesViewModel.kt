@@ -6,12 +6,14 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Environment
 import android.os.storage.StorageManager
+import android.os.storage.StorageVolume
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.honqout.tvlauncher3.R
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +21,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import javax.inject.Inject
 
-class FilesViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class FilesViewModel @Inject constructor(application: Application) :
+    AndroidViewModel(application) {
 
     data class FileItem(
         val name: String,
@@ -111,26 +116,54 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
             runCatching {
-                val storageManager = context.getSystemService(StorageManager::class.java)
-                val primaryVolume = storageManager.primaryStorageVolume
-                storageManager.storageVolumes.forEach { volume ->
-                    val dir = volume.directory ?: return@forEach
-                    if (volume != primaryVolume) {
-                        volumeList.add(
-                            FileItem(
-                                name = volume.getDescription(context),
-                                path = dir.absolutePath,
-                                isDirectory = true,
-                                isVolume = true
-                            )
-                        )
-                    }
-                }
+                appendRemovableVolumes(context, primaryDir.absolutePath, volumeList)
             }.onFailure {
                 Log.e(TAG, "Failed to load storage volumes.", it)
             }
             _items.value = volumeList
         }
+    }
+
+    /**
+     * Append every storage volume except the primary one.
+     */
+    private fun appendRemovableVolumes(
+        context: Application,
+        primaryPath: String,
+        out: MutableList<FileItem>
+    ) {
+        val storageManager = context.getSystemService(StorageManager::class.java) ?: return
+        val volumes = storageManager.storageVolumes
+        // The returned paths are ordered consistently with StorageManager.getStorageVolumes().
+        val externalFilesDirs = context.getExternalFilesDirs(null).filterNotNull()
+        volumes.forEachIndexed { index, volume ->
+            val root = resolveVolumeRoot(volume, externalFilesDirs.getOrNull(index))
+                ?: return@forEachIndexed
+            if (root == primaryPath) {
+                return@forEachIndexed
+            }
+            out.add(
+                FileItem(
+                    name = volume.getDescription(context),
+                    path = root,
+                    isDirectory = true,
+                    isVolume = true
+                )
+            )
+        }
+    }
+
+    /**
+     * Resolve the root directory of a storage volume. [StorageVolume.getDirectory] is only
+     * available from API 30, so on older releases the root is derived from the public per-volume
+     * external files directory (`/storage/XXXX-XXXX/Android/data/<package>/files`).
+     */
+    private fun resolveVolumeRoot(volume: StorageVolume, externalFilesDir: File?): String? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return volume.directory?.absolutePath
+        }
+        val path = externalFilesDir?.absolutePath ?: return null
+        return path.substringBefore("/Android/").ifEmpty { null }
     }
 
     private fun loadDirectory(dir: File) {

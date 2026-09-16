@@ -1,11 +1,8 @@
 package com.github.honqout.tvlauncher3.components.dialog
 
-import android.util.Log
-import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,13 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +37,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.components.button.ActivityButtonTv
+import com.github.honqout.tvlauncher3.components.grid.followGridFocus
 import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentDefault
@@ -53,7 +46,6 @@ import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_LIST_CONTENT_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_HORIZONTAL
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_VERTICAL
-import kotlinx.coroutines.launch
 
 @Composable
 fun AppListDialog(
@@ -61,49 +53,15 @@ fun AppListDialog(
     onItemChosen: (index: Int, activityModel: ActivityModel) -> Unit = { _, _ -> },
     onDismissRequest: () -> Unit = {}
 ) {
-    val tag = "AppListDialog"
     val context = LocalContext.current
-    val numColumns = 5
+    val defaultIcon = remember { context.packageManager.defaultActivityIcon }
+    val numColumns = viewModel.numColumns
     val activityModelList by viewModel.activityModelList.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val lazyGridState = rememberLazyGridState()
     var focusedItemIndex by remember { mutableIntStateOf(0) }
 
-    val centerFocusedItem = {
-        if (focusedItemIndex in activityModelList.indices) {
-            val layoutInfo = lazyGridState.layoutInfo
-            val visibleItems = layoutInfo.visibleItemsInfo
-            if (visibleItems.isNotEmpty()) {
-                val firstVisibleItem = visibleItems.first()
-                val focusedItemIndexOffset = focusedItemIndex - firstVisibleItem.index
-                if (focusedItemIndexOffset in visibleItems.indices) {
-                    val viewportCenter =
-                        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2F
-                    val focusedItem =
-                        visibleItems[focusedItemIndexOffset]
-                    val focusedItemStartOffset = focusedItem.offset.y
-                    val focusedItemHeight = focusedItem.size.height
-                    val focusedItemCenterOffset =
-                        focusedItemStartOffset + focusedItemHeight / 2F
-                    Log.i(tag, "Focused item center offset is $focusedItemCenterOffset")
-                    val scrollOffset = focusedItemCenterOffset - viewportCenter
-                    Log.i(tag, "Prepare to scroll. Offset = 0")
-                    coroutineScope.launch {
-                        lazyGridState.animateScrollBy(scrollOffset)
-                    }
-                } else {
-                    coroutineScope.launch {
-                        lazyGridState.animateScrollToItem(
-                            focusedItemIndex
-                        )
-                    }
-                }
-            }
-        }
-    }
-
     BackHandler {
-        Log.i(tag, "Pressed back button.")
         onDismissRequest()
     }
 
@@ -140,117 +98,12 @@ fun AppListDialog(
                     .background(color = Color.Transparent)
                     .focusable(false)
                     .weight(weight = 1.0f)
-                    .onKeyEvent { keyEvent ->
-                        when (keyEvent.key) {
-                            Key.DirectionUp -> {
-                                when (keyEvent.nativeKeyEvent.action) {
-                                    KeyEvent.ACTION_DOWN -> {
-                                        Log.i(tag, "Pressed key: DirectionUp")
-                                        false
-                                    }
-
-                                    KeyEvent.ACTION_UP -> {
-                                        Log.i(tag, "Released key: DirectionUp")
-                                        centerFocusedItem()
-                                        false
-                                    }
-
-                                    else -> false
-                                }
-                            }
-
-                            Key.DirectionDown -> {
-                                when (keyEvent.nativeKeyEvent.action) {
-                                    KeyEvent.ACTION_DOWN -> {
-                                        Log.i(tag, "Pressed key: DirectionDown")
-                                        false
-                                    }
-
-                                    KeyEvent.ACTION_UP -> {
-                                        Log.i(tag, "Released key: DirectionDown")
-                                        centerFocusedItem()
-                                        false
-                                    }
-
-                                    else -> false
-                                }
-                            }
-
-                            Key.DirectionLeft -> {
-                                when (keyEvent.nativeKeyEvent.action) {
-                                    KeyEvent.ACTION_DOWN -> {
-                                        Log.i(tag, "Pressed key: DirectionLeft")
-                                        false
-                                    }
-
-                                    KeyEvent.ACTION_UP -> {
-                                        Log.i(tag, "Released key: DirectionLeft")
-                                        if (focusedItemIndex >= 0
-                                            && focusedItemIndex < activityModelList.size
-                                        ) {
-                                            val layoutInfo = lazyGridState.layoutInfo
-                                            val visibleItems = layoutInfo.visibleItemsInfo
-                                            if (visibleItems.isNotEmpty()) {
-                                                val firstVisibleItem = visibleItems.first()
-                                                val focusedItemIndexOffset =
-                                                    focusedItemIndex - firstVisibleItem.index
-                                                if (focusedItemIndexOffset < 0
-                                                    || focusedItemIndexOffset >= visibleItems.size
-                                                ) {
-                                                    coroutineScope.launch {
-                                                        lazyGridState.animateScrollToItem(
-                                                            focusedItemIndex
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        false
-                                    }
-
-                                    else -> false
-                                }
-                            }
-
-                            Key.DirectionRight -> {
-                                when (keyEvent.nativeKeyEvent.action) {
-                                    KeyEvent.ACTION_DOWN -> {
-                                        Log.i(tag, "Pressed key: DirectionRight")
-                                        false
-                                    }
-
-                                    KeyEvent.ACTION_UP -> {
-                                        Log.i(tag, "Released key: DirectionRight")
-                                        if (focusedItemIndex >= 0
-                                            && focusedItemIndex < activityModelList.size
-                                        ) {
-                                            val layoutInfo = lazyGridState.layoutInfo
-                                            val visibleItems = layoutInfo.visibleItemsInfo
-                                            if (visibleItems.isNotEmpty()) {
-                                                val firstVisibleItem = visibleItems.first()
-                                                val focusedItemIndexOffset =
-                                                    focusedItemIndex - firstVisibleItem.index
-                                                if (focusedItemIndexOffset < 0
-                                                    || focusedItemIndexOffset >= visibleItems.size
-                                                ) {
-                                                    coroutineScope.launch {
-                                                        lazyGridState.animateScrollToItem(
-                                                            focusedItemIndex
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        false
-                                    }
-
-                                    else -> false
-                                }
-                            }
-
-                            else -> false
-                        }
-                    },
+                    .followGridFocus(
+                        scope = coroutineScope,
+                        state = lazyGridState,
+                        focusedItemIndex = { focusedItemIndex },
+                        itemCount = { activityModelList.size }
+                    ),
                 state = lazyGridState,
                 contentPadding = PaddingValues(PADDING_LIST_CONTENT_EDGE),
                 verticalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_VERTICAL),
@@ -258,20 +111,16 @@ fun AppListDialog(
                 userScrollEnabled = true
             ) {
                 itemsIndexed(activityModelList) { index, item ->
-                    val focusRequester = remember { FocusRequester() }
-
                     ActivityButtonTv(
                         modifier = Modifier
                             .fillMaxSize()
-                            .focusRequester(focusRequester)
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused) {
-                                    Log.i(tag, "FocusedItemIndex: $index")
                                     focusedItemIndex = index
                                 }
                             },
                         activityModel = item,
-                        defaultIcon = context.packageManager.defaultActivityIcon,
+                        defaultIcon = defaultIcon,
                         contentDefaultColor = ButtonContentDefault,
                         contentFocusedColor = ButtonContentFocused,
                         onShortClick = {

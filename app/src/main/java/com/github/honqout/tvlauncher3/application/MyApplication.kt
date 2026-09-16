@@ -10,6 +10,7 @@ import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.util.DebugLogger
+import com.github.honqout.tvlauncher3.BuildConfig
 import com.github.honqout.tvlauncher3.coil.fetcher.ActivityIconFetcher
 import com.github.honqout.tvlauncher3.coil.fetcher.AppIconFetcher
 import com.github.honqout.tvlauncher3.coil.keyer.ActivityIconKeyer
@@ -42,7 +43,12 @@ class MyApplication : Application(), SingletonImageLoader.Factory {
                     .maxSizeBytes(100 * 1024 * 1024L)
                     .build()
             }
-            .logger(DebugLogger())
+            .apply {
+                // Debug logging must never be shipped to release builds.
+                if (BuildConfig.DEBUG) {
+                    logger(DebugLogger())
+                }
+            }
             .build()
     }
 }

@@ -42,17 +42,12 @@
 
     <!-- Hint -->
     <string name="activity_belongs_to">“%s”属于以下应用：</string>
-    <string name="cannot_find_package">找不到应用包。</string>
     <string name="cannot_find_activity">找不到活动。</string>
     <string name="cannot_access_unexported_activity">无法访问未导出的活动。</string>
     <string name="activity_requires_extra_permission">此活动需要额外的权限来启动。</string>
-    <string name="cannot_launch_app">无法启动应用。</string>
     <string name="cannot_uninstall_unknown_type">无法卸载未知类型的应用。</string>
     <string name="cannot_uninstall_system_app">无法卸载系统应用。</string>
-    <string name="uninstall_request_failed">请求卸载失败。</string>
-    <string name="cannot_launch_settings">无法启动设置。</string>
     <string name="uri_is_empty">统一资源标识符为空。</string>
-    <string name="no_app_market_installed">未安装应用市场。</string>
     <string name="no_matching_activity">没有匹配的活动。</string>
 
 </resources>

@@ -41,17 +41,12 @@
 
     <!-- Hint -->
     <string name="activity_belongs_to">\"%s\" belongs to the following app:</string>
-    <string name="cannot_find_package">Cannot find package.</string>
     <string name="cannot_find_activity">Cannot find activity.</string>
     <string name="cannot_access_unexported_activity">Cannot access unexported activity.</string>
     <string name="activity_requires_extra_permission">This activity requires extra permission to be started.</string>
-    <string name="cannot_launch_app">Cannot launch app.</string>
     <string name="cannot_uninstall_unknown_type">Cannot uninstall an app whose type is unknown.</string>
     <string name="cannot_uninstall_system_app">Cannot uninstall system app.</string>
-    <string name="uninstall_request_failed">Failed to request uninstallation.</string>
-    <string name="cannot_launch_settings">Cannot launch settings.</string>
     <string name="uri_is_empty">Uri is empty.</string>
-    <string name="no_app_market_installed">No app market installed.</string>
     <string name="no_matching_activity">No matching activity.</string>
 
 </resources>

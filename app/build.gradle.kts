@@ -43,10 +43,6 @@ configure<ApplicationExtension> {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-
-            optimization {
-                enable = false
-            }
         }
     }
     compileOptions {
@@ -55,40 +51,31 @@ configure<ApplicationExtension> {
     }
     buildFeatures {
         compose = true
-        viewBinding = true
+        // Used to gate the Coil debug logger on debug builds only.
+        buildConfig = true
     }
 }
 
 dependencies {
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.appcompat)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.runtime.livedata)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.datastore)
-    implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.palette)
-    ksp(libs.androidx.room.compiler)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.tv.foundation)
     implementation(libs.androidx.tv.material)
     implementation(libs.coil.compose)
     implementation(libs.drawablepainter)
-    implementation(libs.gson)
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     ksp(libs.kotlin.metadata.jvm)
@@ -97,6 +84,9 @@ dependencies {
     implementation(libs.protobuf.javalite)
     implementation(libs.protobuf.kotlin.lite)
     testImplementation(libs.junit)
+    // The Compose BOM constrains the implementation configuration only, so the androidTest
+    // configuration needs its own platform entry or its Compose artifacts resolve without a version.
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

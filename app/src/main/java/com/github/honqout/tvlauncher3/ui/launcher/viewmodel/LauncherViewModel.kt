@@ -14,7 +14,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.datastore.repository.IconRepository
-import com.github.honqout.tvlauncher3.datastore.repository.SettingsRepository
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.LauncherActivityType
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -35,11 +35,10 @@ import javax.inject.Inject
 @HiltViewModel
 class LauncherViewModel @Inject constructor(
     application: Application,
-    private val iconRepository: IconRepository,
-    private val settingsRepository: SettingsRepository
+    private val iconRepository: IconRepository
 ) : AndroidViewModel(application) {
     // constant
-    val numColumns = 5
+    val numColumns = IconRepository.NUM_FIXED_ACTIVITY
 
     // UI-related
     val tabs = listOf(
@@ -81,6 +80,8 @@ class LauncherViewModel @Inject constructor(
                 resolveInfo?.let { ActivityModel.fromResolveInfo(application, resolveInfo) }
             }
         }
+            // Resolving icons and labels hits PackageManager (IPC), never do that on the main thread.
+            .flowOn(Dispatchers.IO)
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5000),
@@ -208,18 +209,21 @@ class LauncherViewModel @Inject constructor(
     }
 
     fun setIcon(position: Int?, item: ActivityModel?) {
+        val targetPosition = position ?: focusedFixedIconIndex
+        if (targetPosition !in 0..<IconRepository.NUM_FIXED_ACTIVITY) {
+            Log.e(TAG, "Cannot set icon. Invalid target position: $targetPosition.")
+            return
+        }
         viewModelScope.launch {
-            val targetPosition = position ?: focusedFixedIconIndex
-            if (targetPosition in 0..<IconRepository.NUM_FIXED_ACTIVITY)
-                try {
-                    iconRepository.setIconByIndex(
-                        targetPosition,
-                        item?.packageName ?: "",
-                        item?.activityName ?: ""
-                    )
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to set icon.", e)
-                }
+            try {
+                iconRepository.setIconByIndex(
+                    targetPosition,
+                    item?.packageName ?: "",
+                    item?.activityName ?: ""
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set icon.", e)
+            }
         }
     }
 
@@ -238,7 +242,8 @@ class LauncherViewModel @Inject constructor(
     }
 
     fun updateActivityModelList(op: AppListOp, packageName: String?) {
-        viewModelScope.launch(Dispatchers.Default) {
+        // Querying the package manager is IO bound, not CPU bound.
+        viewModelScope.launch(Dispatchers.IO) {
             // Initialize the whole list
             if (op == AppListOp.INIT || _activityModelList.value.isEmpty()) {
                 val list = ApplicationUtils.getActivityModelList(

@@ -1,7 +1,6 @@
 package com.github.honqout.tvlauncher3.components.dialog
 
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.components.button.SettingsActionButtonTv
 import com.github.honqout.tvlauncher3.components.text.DateAndWeekdayText
@@ -51,16 +50,37 @@ fun SettingsDialog(
     timeViewModel: TimeViewModel,
     onDismissRequest: () -> Unit = {}
 ) {
-    val tag = "SettingsDialog"
     val context = LocalContext.current
     val columnCount = 2
     val lazyGridState = rememberLazyGridState()
-    val topBarHeight by launcherViewModel.topBarHeight.collectAsState()
+    val topBarHeight by launcherViewModel.topBarHeight.collectAsStateWithLifecycle()
     val gridWidth =
         2 * SETTINGS_ACTION_BUTTON_WIDTH + 2 * SPACE_LIST_CONTENT_HORIZONTAL + 4 * PADDING_LIST_CONTENT_EDGE
 
+    // OEM builds ship different Settings components. Every entry tries the exact component first
+    // and falls back to the matching system action, so it degrades gracefully instead of silently
+    // doing nothing.
+    val launchSettingsActivity: (String, String, String) -> Unit =
+        { packageName, activityName, fallbackAction ->
+            IntentUtils.handleLaunchActivityResult(
+                context,
+                IntentUtils.launchActivityOrAction(
+                    context,
+                    packageName,
+                    activityName,
+                    fallbackAction,
+                    true
+                )
+            )
+        }
+    val launchSettingsAction: (String) -> Unit = { action ->
+        IntentUtils.handleLaunchIntentResult(
+            context,
+            IntentUtils.launchAction(context, action, true)
+        )
+    }
+
     BackHandler {
-        Log.i(tag, "Pressed back button.")
         onDismissRequest()
     }
 
@@ -127,14 +147,10 @@ fun SettingsDialog(
                             contentDescriptionRes = R.string.settings,
                             titleRes = R.string.settings,
                             onShortClick = {
-                                IntentUtils.handleLaunchActivityResult(
-                                    context,
-                                    IntentUtils.launchActivity(
-                                        context,
-                                        "com.android.settings",
-                                        "com.android.settings.Settings",
-                                        true
-                                    )
+                                launchSettingsActivity(
+                                    "com.android.settings",
+                                    "com.android.settings.Settings",
+                                    Settings.ACTION_SETTINGS
                                 )
                             }
                         )
@@ -146,14 +162,10 @@ fun SettingsDialog(
                             contentDescriptionRes = R.string.tv_settings,
                             titleRes = R.string.tv_settings,
                             onShortClick = {
-                                IntentUtils.handleLaunchActivityResult(
-                                    context,
-                                    IntentUtils.launchActivity(
-                                        context,
-                                        "com.android.tv.settings",
-                                        "com.android.tv.settings.MainSettings",
-                                        true
-                                    )
+                                launchSettingsActivity(
+                                    "com.android.tv.settings",
+                                    "com.android.tv.settings.MainSettings",
+                                    Settings.ACTION_SETTINGS
                                 )
                             }
                         )
@@ -166,11 +178,7 @@ fun SettingsDialog(
                             titleRes = R.string.wlan,
                             descriptionRes = R.string.settings,
                             onShortClick = {
-                                IntentUtils.launchAction(
-                                    context,
-                                    Settings.ACTION_WIFI_SETTINGS,
-                                    true
-                                )
+                                launchSettingsAction(Settings.ACTION_WIFI_SETTINGS)
                             },
                         )
                     }
@@ -182,11 +190,10 @@ fun SettingsDialog(
                             titleRes = R.string.internet,
                             descriptionRes = R.string.tv_settings,
                             onShortClick = {
-                                IntentUtils.launchActivity(
-                                    context,
+                                launchSettingsActivity(
                                     "com.android.tv.settings",
                                     "com.android.tv.settings.connectivity.NetworkActivity",
-                                    true
+                                    Settings.ACTION_WIRELESS_SETTINGS
                                 )
                             }
                         )
@@ -199,11 +206,7 @@ fun SettingsDialog(
                             titleRes = R.string.bluetooth,
                             descriptionRes = R.string.settings,
                             onShortClick = {
-                                IntentUtils.launchAction(
-                                    context,
-                                    Settings.ACTION_BLUETOOTH_SETTINGS,
-                                    true
-                                )
+                                launchSettingsAction(Settings.ACTION_BLUETOOTH_SETTINGS)
                             }
                         )
                     }
@@ -215,11 +218,10 @@ fun SettingsDialog(
                             titleRes = R.string.accessory,
                             descriptionRes = R.string.tv_settings,
                             onShortClick = {
-                                IntentUtils.launchActivity(
-                                    context,
+                                launchSettingsActivity(
                                     "com.android.tv.settings",
                                     "com.android.tv.settings.accessories.AddAccessoryActivity",
-                                    true
+                                    Settings.ACTION_BLUETOOTH_SETTINGS
                                 )
                             }
                         )
@@ -232,11 +234,7 @@ fun SettingsDialog(
                             titleRes = R.string.sound,
                             descriptionRes = R.string.settings,
                             onShortClick = {
-                                IntentUtils.launchAction(
-                                    context,
-                                    Settings.ACTION_SOUND_SETTINGS,
-                                    true
-                                )
+                                launchSettingsAction(Settings.ACTION_SOUND_SETTINGS)
                             }
                         )
                     }
@@ -248,11 +246,10 @@ fun SettingsDialog(
                             titleRes = R.string.sound,
                             descriptionRes = R.string.tv_settings,
                             onShortClick = {
-                                IntentUtils.launchActivity(
-                                    context,
+                                launchSettingsActivity(
                                     "com.android.tv.settings",
                                     "com.android.tv.settings.device.sound.SoundActivity",
-                                    true
+                                    Settings.ACTION_SOUND_SETTINGS
                                 )
                             }
                         )
@@ -265,11 +262,7 @@ fun SettingsDialog(
                             titleRes = R.string.display,
                             descriptionRes = R.string.settings,
                             onShortClick = {
-                                IntentUtils.launchAction(
-                                    context,
-                                    Settings.ACTION_DISPLAY_SETTINGS,
-                                    true
-                                )
+                                launchSettingsAction(Settings.ACTION_DISPLAY_SETTINGS)
                             }
                         )
                     }
@@ -281,11 +274,10 @@ fun SettingsDialog(
                             titleRes = R.string.screen_saver,
                             descriptionRes = R.string.tv_settings,
                             onShortClick = {
-                                IntentUtils.launchActivity(
-                                    context,
+                                launchSettingsActivity(
                                     "com.android.tv.settings",
                                     "com.android.tv.settings.device.display.daydream.DaydreamActivity",
-                                    true
+                                    Settings.ACTION_DREAM_SETTINGS
                                 )
                             }
                         )

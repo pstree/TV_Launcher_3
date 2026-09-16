@@ -165,6 +165,33 @@ class IntentUtils {
         }
 
         /**
+         * Launch the given component, falling back to [fallbackAction] when the component does not
+         * exist on this device. OEM builds of TV boxes differ a lot in which Settings components
+         * they ship, so a hardcoded component alone silently fails on those devices.
+         */
+        fun launchActivityOrAction(
+            context: Context,
+            packageName: String,
+            activityName: String,
+            fallbackAction: String,
+            newTask: Boolean
+        ): LaunchActivityResult {
+            val result = launchActivity(context, packageName, activityName, newTask)
+            if (result != LaunchActivityResult.NOT_FOUND) {
+                return result
+            }
+            Log.i(
+                TAG,
+                "Activity $packageName/$activityName is unavailable. " +
+                        "Falling back to action $fallbackAction."
+            )
+            return when (launchAction(context, fallbackAction, newTask)) {
+                LaunchIntentResult.SUCCESS -> LaunchActivityResult.SUCCESS
+                else -> LaunchActivityResult.NOT_FOUND
+            }
+        }
+
+        /**
          * Launch an app's launcher activity. This will launch the Leanback Launch Intent which is
          * designed for TV prior to the Launch Intent which is designed for phone and tablet. If
          * both intents are null, LaunchActivityIntent.NOT_FOUND will be returned.

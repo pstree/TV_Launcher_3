@@ -16,11 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.github.honqout.tvlauncher3.R
@@ -38,9 +40,18 @@ fun AppShortcutButtonTv(
     onRemoveItem: () -> Unit = {},
     onReplaceItem: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     var buttonWidth by remember { mutableIntStateOf(0) }
     var menuWidth by remember { mutableIntStateOf(0) }
+
+    // The vector ships with a black tint, so tint it white here to match the other shortcut icons.
+    val addIcon = remember {
+        ContextCompat.getDrawable(context, R.drawable.baseline_add_24)
+            ?.mutate()
+            ?.apply { setTint(android.graphics.Color.WHITE) }
+            ?: context.packageManager.defaultActivityIcon
+    }
 
     Box(
         modifier = modifier
@@ -58,7 +69,7 @@ fun AppShortcutButtonTv(
                     buttonWidth = coordinates.size.width
                 },
             activityModel = activityModel,
-            defaultIconRes = R.drawable.baseline_add_24,
+            defaultIcon = addIcon,
             contentDefaultColor = ButtonContentDefault,
             contentFocusedColor = ButtonContentFocused,
             onShortClick = if (activityModel == null) onAddItem else onStartApp,

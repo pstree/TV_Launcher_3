@@ -5,16 +5,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
-import android.content.pm.LauncherApps
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.content.pm.ShortcutInfo
 import android.graphics.drawable.Drawable
 import android.os.Build
-import android.os.Process
 import android.util.Log
-import androidx.annotation.DrawableRes
 import androidx.core.content.pm.PackageInfoCompat
 import com.github.honqout.tvlauncher3.data.ActivityModel
 
@@ -74,32 +70,6 @@ class ApplicationUtils {
             }
         }
 
-        fun getApplicationIconType(context: Context, packageName: String?): IconType {
-            if (packageName.isNullOrEmpty()) {
-                Log.e(
-                    TAG,
-                    "Cannot get type of application icon. The given packageName is null or empty."
-                )
-                return IconType.Icon
-            }
-            val pm = context.packageManager
-            try {
-                val banner = pm.getApplicationBanner(packageName)
-                return if (banner == null) {
-                    IconType.Icon
-                } else {
-                    IconType.Banner
-                }
-            } catch (e: PackageManager.NameNotFoundException) {
-                Log.e(
-                    TAG,
-                    "Cannot get type of application icon. Package $packageName doesn't exist.",
-                    e
-                )
-                return IconType.Icon
-            }
-        }
-
         fun getApplicationIcon(context: Context, packageName: String?): Drawable {
             val pm = context.packageManager
             if (packageName.isNullOrEmpty()) {
@@ -114,13 +84,6 @@ class ApplicationUtils {
             }
         }
 
-        @DrawableRes
-        fun getApplicationIconId(context: Context, packageName: String?): Int {
-            val applicationInfo: ApplicationInfo =
-                getApplicationInfo(context, packageName) ?: return 0
-            return applicationInfo.icon
-        }
-
         fun getApplicationBanner(context: Context, packageName: String?): Drawable {
             val pm = context.packageManager
             if (packageName.isNullOrEmpty()) {
@@ -132,40 +95,6 @@ class ApplicationUtils {
             } catch (e: PackageManager.NameNotFoundException) {
                 Log.e(TAG, "Cannot get application banner. Package $packageName doesn't exist.", e)
                 return pm.defaultActivityIcon
-            }
-        }
-
-        @DrawableRes
-        fun getApplicationBannerId(context: Context, packageName: String?): Int {
-            val applicationInfo: ApplicationInfo =
-                getApplicationInfo(context, packageName) ?: return 0
-            return applicationInfo.banner
-        }
-
-        /**
-         * Get Pair(IconType, (Drawable) Icon) of the application.
-         * @return Pair(IconType.Icon, PackageManager.defaultActivityIcon) if the packageName of
-         * the application cannot be obtained, Pair(IconType.Banner, banner) if the application has
-         * a banner, or Pair(IconType.Icon, icon or PackageManager.defaultActivityIcon) if the
-         * application doesn't have a banner.
-         */
-        fun getApplicationIconPair(
-            context: Context,
-            packageName: String?
-        ): Pair<IconType, Drawable> {
-            val pm = context.packageManager
-            if (packageName.isNullOrEmpty()) {
-                Log.e(
-                    TAG,
-                    "Cannot get type of application icon and application icon. The given packageName is null or empty."
-                )
-                return Pair(IconType.Icon, pm.defaultActivityIcon)
-            }
-            val banner = pm.getApplicationBanner(packageName)
-            return if (banner != null) {
-                Pair(IconType.Banner, banner)
-            } else {
-                Pair(IconType.Icon, getApplicationIcon(context, packageName))
             }
         }
 
@@ -188,63 +117,6 @@ class ApplicationUtils {
                 }
             }
             return ApplicationType.UNKNOWN
-        }
-
-        fun getShortcuts(context: Context, packageName: String?): List<ShortcutInfo?>? {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-                val launcherApps: LauncherApps? =
-                    context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps?
-                try {
-                    if (launcherApps != null && launcherApps.hasShortcutHostPermission()) {
-                        val query = LauncherApps.ShortcutQuery().apply {
-                            setPackage(packageName)
-                            setQueryFlags(
-                                LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
-                                        or LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
-                                        or LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST
-                            )
-                        }
-                        return launcherApps.getShortcuts(query, Process.myUserHandle())
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Cannot get shortcuts of package $packageName.", e)
-                }
-            }
-            return emptyList()
-        }
-
-        fun launchAppShortcut(
-            context: Context,
-            packageName: String?,
-            shortcutId: String?
-        ): Boolean {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-                if (packageName.isNullOrEmpty()) {
-                    Log.e(TAG, "Cannot launch shortcut. The given packageName is null or empty.")
-                    return false
-                }
-                if (shortcutId.isNullOrEmpty()) {
-                    Log.e(TAG, "Cannot launch shortcut. The given shortcutId is null or empty.")
-                    return false
-                }
-                val launcherApps: LauncherApps? =
-                    context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps?
-                try {
-                    if (launcherApps != null && launcherApps.hasShortcutHostPermission()) {
-                        launcherApps.startShortcut(
-                            packageName,
-                            shortcutId,
-                            null,
-                            null,
-                            Process.myUserHandle()
-                        )
-                        return true
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Cannot launch shortcut $shortcutId of package $packageName.", e)
-                }
-            }
-            return false
         }
 
         fun getActivityInfo(
@@ -306,17 +178,6 @@ class ApplicationUtils {
             }
         }
 
-        @DrawableRes
-        fun getActivityIconId(activityInfo: ActivityInfo?): Int {
-            return activityInfo?.icon ?: 0
-        }
-
-        @DrawableRes
-        fun getActivityIconId(context: Context, packageName: String?, activityName: String?): Int {
-            val activityInfo = getActivityInfo(context, packageName, activityName)
-            return getActivityIconId(activityInfo)
-        }
-
         /**
          * Get Pair(IconType, (Drawable) Icon) of a concrete activity of the application.
          * @return Pair(IconType.Icon, PackageManager.defaultActivityIcon) if the packageName of
@@ -368,7 +229,8 @@ class ApplicationUtils {
 
         fun getActivityLabel(context: Context, resolveInfo: ResolveInfo?): String {
             val pm = context.packageManager
-            return resolveInfo?.activityInfo?.loadLabel(pm).toString()
+            val activityInfo = resolveInfo?.activityInfo ?: return ""
+            return activityInfo.loadLabel(pm).toString()
         }
 
         fun getVersionName(context: Context, packageName: String?): String? {
@@ -431,7 +293,12 @@ class ApplicationUtils {
                     setPackage(packageName)
                 }
             }
-            return pm.queryIntentActivities(intent, 0)
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.queryIntentActivities(intent, 0)
+            }
         }
 
         fun getLauncherActivity(

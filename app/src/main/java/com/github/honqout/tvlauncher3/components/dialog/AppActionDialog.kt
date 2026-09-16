@@ -48,6 +48,7 @@ import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
 import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.coil.model.AppIconModel
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils
+import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.ApplicationType
 import com.github.honqout.tvlauncher3.utils.IntentUtils
 import com.github.honqout.tvlauncher3.components.button.AppActionButtonTv
 
@@ -57,7 +58,7 @@ fun AppActionDialog(
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val defIcon = context.packageManager.defaultActivityIcon
+    val defIcon = remember { context.packageManager.defaultActivityIcon }
 
     val imageRequest = remember(item.packageName) {
         ImageRequest.Builder(context)
@@ -69,6 +70,17 @@ fun AppActionDialog(
             .error(defIcon)
             .fallback(defIcon)
             .build()
+    }
+
+    // Every one of these hits PackageManager, so resolve them once instead of on every recomposition.
+    val showBelongToHint = remember(item.packageName, item.activityName) {
+        ApplicationUtils.shouldShowBelongToHint(context, item.packageName, item.activityName)
+    }
+    val applicationLabel = remember(item.packageName) {
+        ApplicationUtils.getApplicationLabel(context, item.packageName) ?: ""
+    }
+    val versionInfo = remember(item.packageName) {
+        ApplicationUtils.getVersionNameAndVersionCode(context, item.packageName)
     }
 
     BackHandler {
@@ -100,11 +112,7 @@ fun AppActionDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 AnimatedVisibility(
-                    visible = ApplicationUtils.shouldShowBelongToHint(
-                        context,
-                        item.packageName,
-                        item.activityName
-                    ),
+                    visible = showBelongToHint,
                     modifier = Modifier
                         .wrapContentSize()
                 ) {
@@ -140,7 +148,7 @@ fun AppActionDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = ApplicationUtils.getApplicationLabel(context, item.packageName) ?: "",
+                    text = applicationLabel,
                     modifier = Modifier,
                     color = Color.White,
                     fontSize = 22.sp,
@@ -163,10 +171,7 @@ fun AppActionDialog(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = ApplicationUtils.getVersionNameAndVersionCode(
-                        context,
-                        item.packageName
-                    ),
+                    text = versionInfo,
                     modifier = Modifier,
                     color = Color.LightGray,
                     fontSize = FONT_SIZE_LARGE,
@@ -207,12 +212,11 @@ fun AppActionDialog(
                     iconRes = R.drawable.baseline_delete_24,
                     labelRes = R.string.uninstall,
                     onShortClick = {
-                        val type: ApplicationUtils.Companion.ApplicationType =
-                            ApplicationUtils.getApplicationType(
-                                context, item.packageName
-                            )
+                        val type = ApplicationUtils.getApplicationType(
+                            context, item.packageName
+                        )
                         when (type) {
-                            ApplicationUtils.Companion.ApplicationType.UNKNOWN -> {
+                            ApplicationType.UNKNOWN -> {
                                 Toast.makeText(
                                     context,
                                     R.string.cannot_uninstall_unknown_type,
@@ -220,7 +224,7 @@ fun AppActionDialog(
                                 ).show()
                             }
 
-                            ApplicationUtils.Companion.ApplicationType.SYSTEM -> {
+                            ApplicationType.SYSTEM -> {
                                 Toast.makeText(
                                     context,
                                     R.string.cannot_uninstall_system_app,
@@ -228,8 +232,8 @@ fun AppActionDialog(
                                 ).show()
                             }
 
-                            ApplicationUtils.Companion.ApplicationType.UPDATED_SYSTEM,
-                            ApplicationUtils.Companion.ApplicationType.USER -> {
+                            ApplicationType.UPDATED_SYSTEM,
+                            ApplicationType.USER -> {
                                 IntentUtils.handleLaunchIntentResult(
                                     context,
                                     IntentUtils.requestUninstallApp(

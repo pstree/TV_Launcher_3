@@ -1,7 +1,6 @@
 package com.github.honqout.tvlauncher3.ui.launcher.activity
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.TextClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -38,7 +37,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -56,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabDefaults
@@ -72,7 +71,6 @@ import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.WallpaperViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_MEDIUM
 import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
 import com.github.honqout.tvlauncher3.ui.theme.TVLauncher3Theme
@@ -89,14 +87,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    companion object {
-        private const val TAG: String = "MainActivity"
-    }
 
     private val timeViewModel: TimeViewModel by viewModels()
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val filesViewModel: FilesViewModel by viewModels()
-    private val wallpaperViewModel: WallpaperViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -122,17 +116,20 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
+            // The home screen swallows Back so it can never leave the launcher.
             BackHandler {
-                Log.i(TAG, "Pressed back button.")
             }
 
             TVLauncher3Theme {
                 val configuration = LocalConfiguration.current
 
                 val tabs = launcherViewModel.tabs
-                val showSettingsDialog by launcherViewModel.showSettingsDialog.collectAsState()
-                val selectedTabIndex by launcherViewModel.selectedTabIndex.collectAsState()
+                val showSettingsDialog by launcherViewModel.showSettingsDialog
+                    .collectAsStateWithLifecycle()
+                val selectedTabIndex by launcherViewModel.selectedTabIndex
+                    .collectAsStateWithLifecycle()
                 val focusRequester = remember { FocusRequester() }
+
 
                 LaunchedEffect(Unit) {
                     delay(100.milliseconds)
@@ -141,7 +138,6 @@ class MainActivity : ComponentActivity() {
                     filesViewModel.onConfigChanged(configuration)
                     // Request focus
                     focusRequester.requestFocus()
-                    Log.i(TAG, "Focused TabRow.")
                 }
 
                 Box(
@@ -203,9 +199,7 @@ class MainActivity : ComponentActivity() {
                                 key(index) {
                                     Tab(
                                         selected = selectedTabIndex == index,
-                                        onFocus = {
-                                            Log.i(TAG, "Focused tab #$index.")
-                                        },
+                                        onFocus = {},
                                         modifier = Modifier
                                             .background(color = bgColor, shape = CircleShape)
                                             .combinedClickable(
@@ -214,12 +208,10 @@ class MainActivity : ComponentActivity() {
                                                 enabled = true,
                                                 role = Role.Tab,
                                                 onClick = {
-                                                    Log.i(TAG, "Clicked tab #$index.")
                                                     launcherViewModel.setSelectedTabIndex(index)
                                                 }
                                             ),
                                         onClick = {
-                                            Log.i(TAG, "Clicked tab #$index by remote controller.")
                                             launcherViewModel.setSelectedTabIndex(index)
                                         },
                                         colors = TabDefaults.pillIndicatorTabColors(
@@ -291,11 +283,12 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(color = Color.Transparent)
                     ) {
-                        when (selectedTabIndex) {
+                        // Clamp instead of writing back to the state holder, which would mutate
+                        // state during composition.
+                        when (selectedTabIndex.coerceIn(0, tabs.lastIndex)) {
                             0 -> HomeScreen(viewModel = launcherViewModel)
                             1 -> AppsScreen(viewModel = launcherViewModel)
-                            2 -> FilesScreen(viewModel = filesViewModel)
-                            else -> launcherViewModel.setSelectedTabIndex(0)
+                            else -> FilesScreen(viewModel = filesViewModel)
                         }
                     }
 

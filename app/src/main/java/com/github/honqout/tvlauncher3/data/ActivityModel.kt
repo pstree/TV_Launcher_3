@@ -37,8 +37,4 @@ data class ActivityModel(
     fun getKey(): String {
         return "$packageName:$activityName"
     }
-
-    fun toActivityRecord(): ActivityRecord {
-        return ActivityRecord(packageName, activityName)
-    }
 }

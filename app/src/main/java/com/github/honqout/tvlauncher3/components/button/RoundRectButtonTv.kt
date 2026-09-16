@@ -2,7 +2,6 @@ package com.github.honqout.tvlauncher3.components.button
 
 import android.graphics.drawable.Drawable
 import android.view.KeyEvent
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -22,13 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -158,51 +155,5 @@ fun IconFromDrawableTv(
         modifier = Modifier
             .requiredSize(width = 75.dp, height = 75.dp),
         contentScale = ContentScale.Fit
-    )
-}
-
-@Composable
-fun IconFromResourceTv(
-    @DrawableRes drawableRes: Int,
-    contentDescription: String?
-) {
-    Image(
-        painter = painterResource(drawableRes),
-        contentDescription = contentDescription,
-        modifier = Modifier
-            .requiredSize(width = 75.dp, height = 75.dp),
-        contentScale = ContentScale.Fit,
-        colorFilter = ColorFilter.tint(Color.White)
-    )
-}
-
-@Composable
-fun RoundRectButtonTv(
-    modifier: Modifier = Modifier,
-    @DrawableRes drawableRes: Int,
-    label: String,
-    contentDescription: String = label,
-    backgroundColor: Color = colorScheme.background,
-    contentDefaultColor: Color = colorScheme.secondary,
-    contentFocusedColor: Color = colorScheme.primary,
-    onShortClick: () -> Unit = {},
-    onLongClick: () -> Unit = {},
-    onMenuOpen: () -> Unit = onLongClick
-) {
-    RoundRectButtonTvImpl(
-        modifier = modifier,
-        icon = {
-            IconFromResourceTv(
-                drawableRes = drawableRes,
-                contentDescription = contentDescription
-            )
-        },
-        label = label,
-        backgroundColor = backgroundColor,
-        contentDefaultColor = contentDefaultColor,
-        contentFocusedColor = contentFocusedColor,
-        onShortClick = onShortClick,
-        onLongClick = onLongClick,
-        onMenuOpen = onMenuOpen
     )
 }

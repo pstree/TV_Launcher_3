@@ -120,24 +120,6 @@ private fun SettingsActionButtonTvImpl(
 fun SettingsActionButtonTv(
     modifier: Modifier = Modifier,
     @DrawableRes iconRes: Int,
-    contentDescription: String?,
-    title: String,
-    onShortClick: () -> Unit = {}
-) {
-    SettingsActionButtonTvImpl(
-        modifier = modifier,
-        iconRes = iconRes,
-        contentDescription = contentDescription,
-        title = title,
-        description = null,
-        onShortClick = onShortClick
-    )
-}
-
-@Composable
-fun SettingsActionButtonTv(
-    modifier: Modifier = Modifier,
-    @DrawableRes iconRes: Int,
     @StringRes contentDescriptionRes: Int,
     @StringRes titleRes: Int,
     onShortClick: () -> Unit = {}

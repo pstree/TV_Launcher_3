@@ -1,6 +1,6 @@
 package com.github.honqout.tvlauncher3.ui.launcher.screen
 
-import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +40,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_LARGE
@@ -50,17 +50,18 @@ import com.github.honqout.tvlauncher3.ui.theme.PADDING_LIST_CONTENT_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_SCREEN_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_HORIZONTAL
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_VERTICAL
+import com.github.honqout.tvlauncher3.utils.IntentUtils
 
 @Composable
 fun FilesScreen(
-    viewModel: FilesViewModel = viewModel()
+    viewModel: FilesViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val lazyGridState = rememberLazyGridState()
-    val topBarHeight by viewModel.topBarHeight.collectAsState()
-    val currentDir by viewModel.currentDir.collectAsState()
-    val items by viewModel.items.collectAsState()
-    val showPermissionDialog by viewModel.showPermissionDialog.collectAsState()
+    val topBarHeight by viewModel.topBarHeight.collectAsStateWithLifecycle()
+    val currentDir by viewModel.currentDir.collectAsStateWithLifecycle()
+    val items by viewModel.items.collectAsStateWithLifecycle()
+    val showPermissionDialog by viewModel.showPermissionDialog.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         if (!viewModel.hasAllFilesAccess()) {
@@ -139,9 +140,13 @@ fun FilesScreen(
                 TextButton(
                     onClick = {
                         viewModel.setShowPermissionDialog(false)
-                        context.startActivity(
-                            Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            IntentUtils.launchAction(
+                                context,
+                                Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION,
+                                true
+                            )
+                        }
                     }
                 ) {
                     Text(text = stringResource(R.string.grant))
