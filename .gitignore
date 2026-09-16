@@ -13,3 +13,16 @@
 .externalNativeBuild
 .cxx
 local.properties
+.idea/compiler.xml
+.idea/gradle.xml
+.idea/markdown.xml
+.idea/misc.xml
+.idea/compiler.xml
+.idea/gradle.xml
+.idea/markdown.xml
+.gitignore
+.workbuddy/memory/2026-09-16.md
+.workbuddy/memory/MEMORY.md
+.idea/compiler.xml
+.idea/gradle.xml
+.idea/markdown.xml
