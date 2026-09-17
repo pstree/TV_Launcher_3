@@ -21,7 +21,7 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.github.honqout.tvlauncher3"
-        minSdk = 24
+        minSdk = 23
         targetSdk = 36
         versionCode = 9
         versionName = "1.1.7"

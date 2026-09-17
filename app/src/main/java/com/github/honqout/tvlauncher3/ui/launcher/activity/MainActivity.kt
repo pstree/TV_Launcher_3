@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -189,6 +190,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Hide status bar and navigation bar
         UIUtils.handleSystemBarsVisibility(window, false)
+        // 布局后再执行一次, 避免被 setContent 里的 enableEdgeToEdge 覆盖
+        window.decorView.post {
+            UIUtils.handleSystemBarsVisibility(window, false)
+        }
 
         setContent {
             DisposableEffect(Unit) {
@@ -337,9 +342,17 @@ class MainActivity : ComponentActivity() {
                                 key(index) {
                                     Tab(
                                         selected = selectedTabIndex == index,
-                                        onFocus = {},
+                                        onFocus = {
+                                            launcherViewModel.setSelectedTabIndex(index)
+                                        },
                                         modifier = Modifier
                                             .background(color = bgColor, shape = CircleShape)
+                                            // 遥控器 DPAD 移动到该 tab 即切换内容,无需再按 OK
+                                            .onFocusChanged { focusState ->
+                                                if (focusState.isFocused) {
+                                                    launcherViewModel.setSelectedTabIndex(index)
+                                                }
+                                            }
                                             .combinedClickable(
                                                 interactionSource = interactionSource,
                                                 indication = null,
