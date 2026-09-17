@@ -3,40 +3,33 @@ package com.github.honqout.tvlauncher3.components.dialog
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.components.button.SettingsActionButtonTv
-import com.github.honqout.tvlauncher3.components.text.DateAndWeekdayText
-import com.github.honqout.tvlauncher3.components.text.TimeText
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
-import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_EXTRA_LARGE
+import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainerDark
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_LIST_CONTENT_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.SETTINGS_ACTION_BUTTON_WIDTH
@@ -47,12 +40,12 @@ import com.github.honqout.tvlauncher3.utils.IntentUtils
 @Composable
 fun SettingsDialog(
     launcherViewModel: LauncherViewModel,
-    timeViewModel: TimeViewModel,
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val columnCount = 2
     val lazyGridState = rememberLazyGridState()
+    // The panel hangs below the top bar, so the launcher clock and tab row stay visible.
     val topBarHeight by launcherViewModel.topBarHeight.collectAsStateWithLifecycle()
     val gridWidth =
         2 * SETTINGS_ACTION_BUTTON_WIDTH + 2 * SPACE_LIST_CONTENT_HORIZONTAL + 4 * PADDING_LIST_CONTENT_EDGE
@@ -88,53 +81,43 @@ fun SettingsDialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(
             dismissOnBackPress = true,
-            dismissOnClickOutside = true,
+            // The floating panel keeps the launcher visible behind it, so outside taps are handled
+            // by the transparent backdrop below. The platform check compares the touch against the
+            // content view bounds, and those spans the whole screen here.
+            dismissOnClickOutside = false,
             usePlatformDefaultWidth = false
         )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.7f))
+                .pointerInput(Unit) {
+                    // Transparent backdrop: tapping outside the panel closes it.
+                    detectTapGestures(onTap = { onDismissRequest() })
+                }
+                .padding(
+                    top = PADDING_DIALOG_EDGE + topBarHeight.dp,
+                    end = PADDING_DIALOG_EDGE,
+                    bottom = PADDING_DIALOG_EDGE
+                ),
+            contentAlignment = Alignment.TopEnd
         ) {
             Column(
                 modifier = Modifier
-                    .wrapContentWidth()
-                    .fillMaxHeight()
-                    .background(Color.Transparent)
-                    .align(Alignment.TopEnd)
-                    .padding(PADDING_DIALOG_EDGE)
+                    .background(
+                        color = OnWallpaperContainerDark,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    // Keep taps landing on the panel itself from reaching the backdrop, so tapping
+                    // the padding between two buttons does not dismiss the panel.
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = {})
+                    }
             ) {
-                Row(
-                    modifier = Modifier
-                        .height(topBarHeight.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TimeText(
-                        modifier = Modifier,
-                        viewModel = timeViewModel,
-                        color = Color.White,
-                        fontSize = 30.sp
-                    )
-
-                    Spacer(modifier = Modifier.width(20.dp))
-
-                    DateAndWeekdayText(
-                        modifier = Modifier,
-                        viewModel = timeViewModel,
-                        color = Color.White,
-                        fontSize = FONT_SIZE_EXTRA_LARGE
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(columnCount),
                     modifier = Modifier
-                        .width(gridWidth)
-                        .fillMaxHeight(),
+                        .width(gridWidth),
                     state = lazyGridState,
                     contentPadding = PaddingValues(PADDING_LIST_CONTENT_EDGE),
                     verticalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_VERTICAL),

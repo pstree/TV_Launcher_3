@@ -11,6 +11,9 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 val OnWallpaperContainer = Color.LightGray.copy(alpha = 0.3f)
+// Content panel over the wallpaper. Darker than OnWallpaperContainer, whose 30% light grey is
+// almost invisible on bright wallpapers (e.g. the Bing daily wallpaper).
+val OnWallpaperContainerDark = Color.Black.copy(alpha = 0.4f)
 val ButtonContainerDefault = Color.LightGray.copy(alpha = 0.45f)
 val ButtonContainerFocused = Color.LightGray.copy(alpha = 0.6f)
 val ButtonContentDefault = Color.White.copy(alpha = 0.7f)

@@ -3,7 +3,7 @@
 ## 项目定位
 - Android TV 启动器（Home screen 替代品），Kotlin + Jetpack Compose + **androidx.tv.material3**（不是 mobile material3）。
 - 单一 Gradle 模块 `:app`，根包 `com.github.honqout.tvlauncher3`，namespace = applicationId。
-- minSdk 24 / compileSdk 37 / targetSdk 37，JVM 17，AGP 9.x + Kotlin 2.x + KSP + Hilt + Protobuf。
+- minSdk 24 / compileSdk 36 / targetSdk 36（2026-09-17 核对 `app/build.gradle.kts`，此前记的 37 已过时），JVM 17，AGP 9.x + Kotlin 2.x + KSP + Hilt + Protobuf。
 
 ## 分层与架构约定（当前事实）
 - `ui/launcher/activity` 只放 `MainActivity`（承载 3 个 tab 的 ViewModel 并向下传递）。
@@ -18,6 +18,8 @@
 - 系统设置跳转必须走 `IntentUtils.launchActivityOrAction(...)`（组件不存在时回退到 `Settings.ACTION_*`），因为 OEM TV 的 Settings 组件名差异极大。
 - D-pad 网格滚动统一用 `components/grid/GridFocus.kt` 的 `Modifier.followGridFocus(...)`，不要再在屏幕里复制粘贴按键/滚动逻辑。
 - 尺寸用 `dp`、字号用 `sp`（`ui/theme/Dimen.kt`）；界面文案必须进 `values/strings.xml` + `values-zh-rCN/strings.xml`。
+- 首页设置面板（`components/dialog/SettingsDialog.kt`）是**悬浮卡片**：透明全屏背板 + `Alignment.TopEnd` 圆角卡片（挂在顶部栏下方），不铺满屏幕、无黑遮罩；外部点击关闭靠自己写的背板 `detectTapGestures`，因为 Compose 平台 `dismissOnClickOutside` 按内容 View 矩形判定，内容满屏时会失效。
+- 背景色两档（`ui/theme/Color.kt`）：`OnWallpaperContainer`（LightGray 30%，顶部栏/主屏图标网格/Apps 列表等）与 `OnWallpaperContainerDark`（Black 40%，**内容面板**：文件列表、设置悬浮面板）。选浅色的原因是浅色壁纸（必应每日壁纸）下 30% 浅灰几乎看不见。
 
 ## 构建 / 验证命令（重要）
 本机 **没有配置 `local.properties`**，编译需显式指定 SDK：
@@ -28,7 +30,7 @@ cd /home/qian/IdeaProject/TV_Launcher_3
 sh gradlew :app:assembleDebug          # 编译 + 打包
 sh gradlew :app:lintDebug              # 静态检查（本仓库 lint 是硬门槛）
 ```
-- SDK 位于 `/home/qian/android/sdk`，已装 `platforms;android-37.0` 与 `build-tools;37.0.0`（compileSdk=37 必需，默认只有 android-34）。
+- SDK 位于 `/home/qian/android/sdk`，现装 `platforms;android-34 / android-36 / android-37.0`。**不要加 `--offline`**：缺哪个 platform，AGP 会自动从网上下载补装（加 `--offline` 则直接报 `Failed to find target with hash string 'android-36'`）。
 - `gradlew` 没有执行权限，必须用 `sh gradlew`。
 - `gradle/libs.versions.toml` 里给 `androidTestImplementation` 也必须单独加 `platform(libs.androidx.compose.bom)`，否则 androidTest 类路径版本解析为空、`lintDebug` 直接失败。
 

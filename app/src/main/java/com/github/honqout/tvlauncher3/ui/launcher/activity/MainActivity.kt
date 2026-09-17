@@ -87,7 +87,6 @@ import com.github.honqout.tvlauncher3.ui.launcher.screen.FilesScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
-import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.TimeViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_MEDIUM
 import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
 import com.github.honqout.tvlauncher3.ui.theme.TVLauncher3Theme
@@ -112,7 +111,6 @@ class MainActivity : ComponentActivity() {
         private const val TAG = "TVLauncher3"
     }
 
-    private val timeViewModel: TimeViewModel by viewModels()
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val filesViewModel: FilesViewModel by viewModels()
 
@@ -417,7 +415,6 @@ class MainActivity : ComponentActivity() {
                     ) {
                         SettingsDialog(
                             launcherViewModel = launcherViewModel,
-                            timeViewModel = timeViewModel,
                             onDismissRequest = {
                                 launcherViewModel.setShowSettingsScreen(false)
                             }

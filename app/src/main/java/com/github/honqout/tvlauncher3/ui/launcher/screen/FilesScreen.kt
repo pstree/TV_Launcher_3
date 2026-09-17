@@ -45,7 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_LARGE
-import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
+import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainerDark
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_LIST_CONTENT_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_SCREEN_EDGE
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_HORIZONTAL
@@ -104,7 +104,7 @@ fun FilesScreen(
                     .fillMaxWidth(0.5f)
                     .fillMaxHeight()
                     .background(
-                        color = OnWallpaperContainer,
+                        color = OnWallpaperContainerDark,
                         shape = RoundedCornerShape(16.dp)
                     ),
                 state = lazyGridState,
