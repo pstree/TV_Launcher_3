@@ -110,9 +110,26 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    // Enumerating every installed launcher activity costs a PackageManager query per app, so it is
+    // deferred until the Apps tab (or the app picker) is actually shown instead of running on the
+    // cold start path.
+    @Volatile
+    private var activityModelListLoadRequested = false
+
     init {
         registerPackageBR()
         initializeIcons()
+    }
+
+    /**
+     * Load the launchable-activity list unless that already happened. Safe to call from every
+     * screen that displays it.
+     */
+    fun ensureActivityModelListLoaded() {
+        if (activityModelListLoadRequested) {
+            return
+        }
+        activityModelListLoadRequested = true
         updateActivityModelList(AppListOp.INIT, null)
     }
 
@@ -246,6 +263,7 @@ class LauncherViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             // Initialize the whole list
             if (op == AppListOp.INIT || _activityModelList.value.isEmpty()) {
+                activityModelListLoadRequested = true
                 val list = ApplicationUtils.getActivityModelList(
                     getApplication(),
                     LauncherActivityType.NORMAL,
@@ -324,7 +342,10 @@ class LauncherViewModel @Inject constructor(
         oldConfig?.let {
             val diff = it.diff(newConfig)
             if ((diff and ActivityInfo.CONFIG_LOCALE) != 0) {
-                updateActivityModelList(AppListOp.INIT, null)
+                // Labels have to be resolved again, but only if the list was ever loaded.
+                if (activityModelListLoadRequested) {
+                    updateActivityModelList(AppListOp.INIT, null)
+                }
                 refreshFixedIconListSignal.tryEmit(Unit)
             }
         }

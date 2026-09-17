@@ -213,6 +213,24 @@ class ApplicationUtils {
             }
         }
 
+        /**
+         * Whether an application should be drawn with its banner instead of its icon.
+         *
+         * This is the same check [getActivityIconPair] performs, but without loading the icon
+         * drawable, which listing a few hundred activities would otherwise pay for.
+         */
+        fun getIconType(context: Context, packageName: String?): IconType {
+            if (packageName.isNullOrEmpty()) {
+                return IconType.Icon
+            }
+            val banner = context.packageManager.getApplicationBanner(packageName)
+            return if (banner != null) {
+                IconType.Banner
+            } else {
+                IconType.Icon
+            }
+        }
+
         fun getActivityName(resolveInfo: ResolveInfo?): String {
             return resolveInfo?.activityInfo?.name ?: ""
         }

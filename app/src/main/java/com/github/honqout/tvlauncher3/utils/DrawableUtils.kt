@@ -19,12 +19,19 @@ class DrawableUtils {
     companion object {
         private const val TAG: String = "DrawableUtils"
 
+        /**
+         * Raster size used when a drawable reports no intrinsic size. Adaptive icons and layer
+         * drawables report -1, and rasterising those at 1x1 would make the dominant colour a
+         * single arbitrary pixel.
+         */
+        private const val FALLBACK_RASTER_SIZE = 192
+
         fun toBitmap(drawable: Drawable): Bitmap {
             return when (drawable) {
                 is BitmapDrawable -> drawable.bitmap
                 else -> {
-                    val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1
-                    val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1
+                    val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: FALLBACK_RASTER_SIZE
+                    val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: FALLBACK_RASTER_SIZE
                     val bitmap = createBitmap(width, height)
                     val canvas = Canvas(bitmap)
                     drawable.setBounds(0, 0, width, height)

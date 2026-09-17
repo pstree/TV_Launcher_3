@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -59,6 +60,10 @@ fun AppsScreen(
     val activityModelList by viewModel.activityModelList.collectAsStateWithLifecycle()
     val focusedItemIndex by viewModel.focusedActivityItemIndex.collectAsStateWithLifecycle()
     val activityModel: ActivityModel? by viewModel.selectedActivityModel.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.ensureActivityModelListLoaded()
+    }
 
     Box(
         modifier = Modifier

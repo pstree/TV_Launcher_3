@@ -62,12 +62,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -111,6 +111,77 @@ class MainActivity : ComponentActivity() {
         private const val TAG = "TVLauncher3"
     }
 
+    /**
+     * A decoded system wallpaper. [id] is the id reported by the wallpaper service so repeated
+     * loads can be skipped, and [bitmap] is null when the device has no readable wallpaper (the
+     * built-in one is then used instead).
+     */
+    private data class WallpaperSnapshot(val id: Int, val bitmap: ImageBitmap?)
+
+    /**
+     * Decode the system wallpaper into a full screen bitmap off the main thread.
+     *
+     * @return the new snapshot, or null when the wallpaper is still [previousId], in which case the
+     * caller keeps the bitmap it already has. Rasterising the wallpaper again on every ON_RESUME
+     * would allocate a full screen bitmap for nothing.
+     */
+    private suspend fun loadWallpaperSnapshot(previousId: Int?): WallpaperSnapshot? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val wm = WallpaperManager.getInstance(applicationContext)
+                val wallpaperId = wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM)
+                if (wallpaperId == previousId) {
+                    return@runCatching null
+                }
+                WallpaperSnapshot(wallpaperId, decodeWallpaper(wm)?.asImageBitmap())
+            }.onFailure {
+                Log.w(TAG, "Failed to load the system wallpaper.", it)
+            }.getOrNull()
+        }
+
+    /**
+     * 将系统壁纸绘制为位图;无壁纸或读取失败时返回 null,由内置默认壁纸兜底
+     */
+    private fun decodeWallpaper(wm: WallpaperManager): Bitmap? {
+        var bitmap: Bitmap? = null
+        try {
+            val drawable = wm.drawable
+            if (drawable != null) {
+                val metrics = applicationContext.resources.displayMetrics
+                bitmap = createBitmap(metrics.widthPixels, metrics.heightPixels)
+                val canvas = Canvas(bitmap)
+                drawable.setBounds(0, 0, bitmap.width, bitmap.height)
+                drawable.draw(canvas)
+                Log.i(TAG, "wallpaper loaded from drawable")
+            } else {
+                Log.w(TAG, "wm.drawable is null")
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "load from drawable failed", t)
+        }
+        if (bitmap == null) {
+            // 兜底:直接读取系统壁纸文件
+            try {
+                val fd = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    wm.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)
+                } else {
+                    null
+                }
+                if (fd != null) {
+                    fd.use { pfd ->
+                        bitmap = BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor)
+                    }
+                    Log.i(TAG, "wallpaper loaded from file ${bitmap?.width}x${bitmap?.height}")
+                } else {
+                    Log.w(TAG, "wallpaper file is null")
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "load from file failed", t)
+            }
+        }
+        return bitmap
+    }
+
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val filesViewModel: FilesViewModel by viewModels()
 
@@ -152,64 +223,16 @@ class MainActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle()
                 val focusRequester = remember { FocusRequester() }
 
-                var wallpaperBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-                val appContext = LocalContext.current.applicationContext
+                var wallpaperSnapshot by remember { mutableStateOf<WallpaperSnapshot?>(null) }
                 val scope = rememberCoroutineScope()
                 val loadWallpaper: () -> Unit = {
                     scope.launch {
-                        wallpaperBitmap = withContext(Dispatchers.IO) {
-                            runCatching {
-                                // 将系统壁纸绘制为位图;无壁纸或读取失败时返回 null,由内置默认壁纸兜底
-                                val wm = WallpaperManager.getInstance(appContext)
-                                var bitmap: Bitmap? = null
-                                try {
-                                    val drawable = wm.drawable
-                                    if (drawable != null) {
-                                        val metrics = appContext.resources.displayMetrics
-                                        bitmap = Bitmap.createBitmap(
-                                            metrics.widthPixels,
-                                            metrics.heightPixels,
-                                            Bitmap.Config.ARGB_8888
-                                        )
-                                        val canvas = Canvas(bitmap)
-                                        drawable.setBounds(0, 0, bitmap.width, bitmap.height)
-                                        drawable.draw(canvas)
-                                        Log.i(TAG, "wallpaper loaded from drawable")
-                                    } else {
-                                        Log.w(TAG, "wm.drawable is null")
-                                    }
-                                } catch (t: Throwable) {
-                                    Log.w(TAG, "load from drawable failed", t)
-                                }
-                                if (bitmap == null) {
-                                    // 兜底:直接读取系统壁纸文件
-                                    try {
-                                        val fd = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                            wm.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)
-                                        } else {
-                                            null
-                                        }
-                                        if (fd != null) {
-                                            fd.use { pfd ->
-                                                bitmap = BitmapFactory.decodeFileDescriptor(
-                                                    pfd.fileDescriptor
-                                                )
-                                            }
-                                            Log.i(
-                                                TAG,
-                                                "wallpaper loaded from file ${bitmap?.width}x${bitmap?.height}"
-                                            )
-                                        } else {
-                                            Log.w(TAG, "wallpaper file is null")
-                                        }
-                                    } catch (t: Throwable) {
-                                        Log.w(TAG, "load from file failed", t)
-                                    }
-                                }
-                                bitmap?.asImageBitmap()
-                            }.getOrNull().also { loaded ->
-                                Log.i(TAG, "system wallpaper available: ${loaded != null}")
-                            }
+                        // A null result means the system wallpaper did not change, in which case the
+                        // already decoded bitmap is kept instead of being rebuilt.
+                        val snapshot = loadWallpaperSnapshot(wallpaperSnapshot?.id)
+                        if (snapshot != null) {
+                            wallpaperSnapshot = snapshot
+                            Log.i(TAG, "system wallpaper available: ${snapshot.bitmap != null}")
                         }
                     }
                 }
@@ -218,7 +241,7 @@ class MainActivity : ComponentActivity() {
                 }
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
-                    // 每次回到桌面时重新加载系统壁纸,系统设置中换壁纸后立即生效
+                    // 每次回到桌面时检查系统壁纸,系统设置中换壁纸后立即生效(壁纸未变则复用已解码的位图)
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
                             loadWallpaper()
@@ -233,7 +256,6 @@ class MainActivity : ComponentActivity() {
                     delay(100.milliseconds)
                     // Handle config changes
                     launcherViewModel.onConfigChanged(configuration)
-                    filesViewModel.onConfigChanged(configuration)
                     // Request focus
                     focusRequester.requestFocus()
                 }
@@ -245,7 +267,7 @@ class MainActivity : ComponentActivity() {
                         .background(Color.Transparent)
                 ) {
                     // 优先展示系统壁纸;获取不到时使用内置默认壁纸
-                    val systemWallpaper = wallpaperBitmap
+                    val systemWallpaper = wallpaperSnapshot?.bitmap
                     if (systemWallpaper != null) {
                         Image(
                             bitmap = systemWallpaper,

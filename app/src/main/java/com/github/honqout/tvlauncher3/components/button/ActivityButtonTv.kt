@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,7 +25,11 @@ import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.coil.model.ActivityIconModel
 import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContainerDefault
+import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.IconType
+import com.github.honqout.tvlauncher3.utils.DrawableUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * A square shortcut for a launchable activity. When [activityModel] is null the button renders
@@ -41,6 +47,24 @@ fun ActivityButtonTv(
 ) {
     val context = LocalContext.current
     val isBanner = activityModel?.iconType == IconType.Banner
+
+    // The shortcut background is the app icon's dominant colour. Extracting it costs a
+    // PackageManager call plus a Palette pass over the icon bitmap, so it is derived here, for the
+    // items actually on screen, instead of for every installed app while the list is built.
+    val backgroundColor by produceState(
+        initialValue = if (activityModel == null) ButtonContainerDefault else Color.Transparent,
+        key1 = activityModel?.getKey()
+    ) {
+        val model = activityModel ?: return@produceState
+        value = withContext(Dispatchers.IO) {
+            val (_, icon) = ApplicationUtils.getActivityIconPair(
+                context,
+                model.packageName,
+                model.activityName
+            )
+            Color(DrawableUtils.getBackgroundColorFromAppIcon(icon))
+        }
+    }
 
     val imageRequest = remember(activityModel?.getKey(), defaultIcon) {
         if (activityModel == null) {
@@ -84,8 +108,7 @@ fun ActivityButtonTv(
             }
         },
         label = activityModel?.label ?: stringResource(R.string.add_app),
-        backgroundColor = if (activityModel == null) ButtonContainerDefault
-        else Color(activityModel.color),
+        backgroundColor = backgroundColor,
         contentDefaultColor = contentDefaultColor,
         contentFocusedColor = contentFocusedColor,
         onShortClick = onShortClick,

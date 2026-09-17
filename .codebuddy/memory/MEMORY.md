@@ -20,6 +20,10 @@
 - 尺寸用 `dp`、字号用 `sp`（`ui/theme/Dimen.kt`）；界面文案必须进 `values/strings.xml` + `values-zh-rCN/strings.xml`。
 - 首页设置面板（`components/dialog/SettingsDialog.kt`）是**悬浮卡片**：透明全屏背板 + `Alignment.TopEnd` 圆角卡片（挂在顶部栏下方），不铺满屏幕、无黑遮罩；外部点击关闭靠自己写的背板 `detectTapGestures`，因为 Compose 平台 `dismissOnClickOutside` 按内容 View 矩形判定，内容满屏时会失效。
 - 背景色两档（`ui/theme/Color.kt`）：`OnWallpaperContainer`（LightGray 30%，顶部栏/主屏图标网格/Apps 列表等）与 `OnWallpaperContainerDark`（Black 40%，**内容面板**：文件列表、设置悬浮面板）。选浅色的原因是浅色壁纸（必应每日壁纸）下 30% 浅灰几乎看不见。
+- **冷启动性能三条硬约定**（2026-09-17 修复后，勿回退）：
+  1. 枚举全部可启动应用列表（`LauncherViewModel.updateActivityModelList(INIT)`）**禁止放回 `init`**，只能由 `ensureActivityModelListLoaded()` 触发，调用点在 `AppsScreen` / `AppListDialog` 的 `LaunchedEffect`（列表只在切到 Apps tab / 打开应用选择对话框时才需要）。
+  2. `ActivityModel` **不持有**图标底色；每项底色由 `ActivityButtonTv` 用 `produceState(Dispatchers.IO)` 按可见项现算（Palette 量化 + 一次 PackageManager）。为 N 个应用预先算色是首启卡顿的主因。
+  3. 系统壁纸按 `WallpaperManager.getWallpaperId(FLAG_SYSTEM)` 去重（`MainActivity.loadWallpaperSnapshot`），命中相同 id 就复用已解码位图；不要再每次 `ON_RESUME` 重建全屏 ARGB_8888（1080p 8MB / 4K 33MB）。
 
 ## 构建 / 验证命令（重要）
 本机 **没有配置 `local.properties`**，编译需显式指定 SDK：
