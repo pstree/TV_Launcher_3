@@ -3,6 +3,7 @@ package com.github.honqout.tvlauncher3.components.button
 import android.graphics.drawable.Drawable
 import android.view.KeyEvent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,8 +52,16 @@ private fun RoundRectButtonTvImpl(
     Surface(
         modifier = modifier
             .focusRequester(focusRequester)
-            // Touch taps and long presses are handled by the Surface's onClick/onLongClick; the
-            // remote's menu key is not, so it needs its own key handler.
+            // tv-material 1.1.0's clickable Surface only fires onClick/onLongClick from DPAD-enter
+            // key events (SurfaceClickableUtils.handleDPadEnter); it has no pointer handler at all,
+            // so touch and mouse taps/long presses must be wired up explicitly here. The remote's
+            // menu key is not handled by the library either, so it gets a key handler below.
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onShortClick() },
+                    onLongPress = { onLongClick() }
+                )
+            }
             .onKeyEvent { keyEvent ->
                 if (keyEvent.key == Key.Menu &&
                     keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP

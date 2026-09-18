@@ -2,6 +2,7 @@ package com.github.honqout.tvlauncher3.components.button
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,11 +40,15 @@ fun AppActionButtonTv(
 ) {
     Button(
         onClick = onShortClick,
-        // tv-material Button already handles touch taps and DPAD-center/Enter activation via
-        // onClick; no extra pointerInput or key-event layer on top of it.
+        // tv-material 1.1.0's clickable Button only fires onClick from DPAD-enter key events
+        // (SurfaceClickableUtils.handleDPadEnter); it has no pointer handler at all, so touch and
+        // mouse clicks must be wired up explicitly here.
         modifier = modifier
             .wrapContentHeight()
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onShortClick() })
+            },
         onLongClick = {},
         enabled = true,
         scale = ButtonDefaults.scale(),
