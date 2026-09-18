@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  MainActivity is a HOME app and deliberately declares neither CATEGORY_LAUNCHER nor
+  CATEGORY_LEANBACK_LAUNCHER, so the launcher never lists itself. That is what
+  MissingLeanbackLauncher complains about, next to the android.software.leanback feature.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="MissingLeanbackLauncher">
 
     <uses-feature
         android:name="android.hardware.touchscreen"

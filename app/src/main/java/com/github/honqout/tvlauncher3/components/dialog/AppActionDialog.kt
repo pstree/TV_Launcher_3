@@ -29,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Text
@@ -42,6 +41,7 @@ import coil3.request.fallback
 import coil3.request.placeholder
 import coil3.size.Precision
 import com.github.honqout.tvlauncher3.R
+import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_HEADLINE
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_LARGE
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_SMALL
 import com.github.honqout.tvlauncher3.ui.theme.PADDING_DIALOG_EDGE
@@ -151,7 +151,7 @@ fun AppActionDialog(
                     text = applicationLabel,
                     modifier = Modifier,
                     color = Color.White,
-                    fontSize = 22.sp,
+                    fontSize = FONT_SIZE_HEADLINE,
                     fontWeight = FontWeight.Bold,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1

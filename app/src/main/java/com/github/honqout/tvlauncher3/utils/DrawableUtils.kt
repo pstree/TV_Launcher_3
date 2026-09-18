@@ -102,6 +102,11 @@ class DrawableUtils {
         }
 
         private fun getColorFromGradientDrawable(gradientDrawable: GradientDrawable): Int? {
+            // getColors()/getColor() are API 24+; below that the colour cannot be read, and the
+            // caller falls back to the palette extraction.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+                return null
+            }
             val colors = gradientDrawable.colors
             return if (colors != null && colors.size == 1) {
                 colors[0]

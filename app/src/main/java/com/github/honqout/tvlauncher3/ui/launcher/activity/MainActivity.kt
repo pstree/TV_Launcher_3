@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
      * loads can be skipped, and [bitmap] is null when the device has no readable wallpaper (the
      * built-in one is then used instead).
      */
-    private data class WallpaperSnapshot(val id: Int, val bitmap: ImageBitmap?)
+    private data class WallpaperSnapshot(val id: Int?, val bitmap: ImageBitmap?)
 
     /**
      * Decode the system wallpaper into a full screen bitmap off the main thread.
@@ -136,8 +136,13 @@ class MainActivity : ComponentActivity() {
         withContext(Dispatchers.IO) {
             runCatching {
                 val wm = WallpaperManager.getInstance(applicationContext)
-                val wallpaperId = wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM)
-                if (wallpaperId == previousId) {
+                // getWallpaperId is API 24+, so on older devices the wallpaper is always reloaded.
+                val wallpaperId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM)
+                } else {
+                    null
+                }
+                if (wallpaperId != null && wallpaperId == previousId) {
                     return@runCatching null
                 }
                 WallpaperSnapshot(wallpaperId, decodeWallpaper(wm)?.asImageBitmap())

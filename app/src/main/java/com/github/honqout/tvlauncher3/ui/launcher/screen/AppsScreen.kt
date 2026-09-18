@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -55,6 +56,8 @@ fun AppsScreen(
     val coroutineScope = rememberCoroutineScope()
     val lazyGridState = rememberLazyGridState()
     val numColumns = viewModel.numColumns
+    // Resolved once instead of on every item composition: the placeholder is needed by each cell.
+    val defaultIcon = remember { context.packageManager.defaultActivityIcon }
     val topBarHeight by viewModel.topBarHeight.collectAsStateWithLifecycle()
     val showAppActionDialog by viewModel.showAppActionDialog.collectAsStateWithLifecycle()
     val activityModelList by viewModel.activityModelList.collectAsStateWithLifecycle()
@@ -108,7 +111,7 @@ fun AppsScreen(
                                 }
                             },
                         activityModel = item,
-                        defaultIcon = context.packageManager.defaultActivityIcon,
+                        defaultIcon = defaultIcon,
                         contentDefaultColor = ButtonContentDefault,
                         contentFocusedColor = ButtonContentFocused,
                         onShortClick = {

@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Environment
 import android.os.storage.StorageManager
@@ -99,20 +98,20 @@ class FilesViewModel @Inject constructor(application: Application) :
     }
 
     fun hasAllFilesAccess(): Boolean {
-        return when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
-                Environment.isExternalStorageManager()
-            // Android 6~9 需要 READ+WRITE 才能读和删;Q+ 写权限已废弃,只查 READ
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ->
-                ContextCompat.checkSelfPermission(
-                    getApplication(), Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED &&
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                        ContextCompat.checkSelfPermission(
-                            getApplication(), Manifest.permission.WRITE_EXTERNAL_STORAGE
-                        ) == PackageManager.PERMISSION_GRANTED)
-            else -> true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager()
         }
+        val readGranted = ContextCompat.checkSelfPermission(
+            getApplication(), Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Q: the write permission is deprecated, so READ is all that can be checked.
+            return readGranted
+        }
+        // Android 6~9: reading and deleting both need the write permission as well.
+        return readGranted && ContextCompat.checkSelfPermission(
+            getApplication(), Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     fun setShowPermissionDialog(newValue: Boolean) {
@@ -121,13 +120,6 @@ class FilesViewModel @Inject constructor(application: Application) :
 
     fun setTopBarHeight(newValue: Int) {
         _topBarHeight.update { newValue }
-    }
-
-    fun onConfigChanged(newConfig: Configuration) {
-        if (!hasAllFilesAccess()) {
-            setShowPermissionDialog(true)
-        }
-        refresh()
     }
 
     fun refresh() {
@@ -239,7 +231,10 @@ class FilesViewModel @Inject constructor(application: Application) :
             volume.getDescription(context)
         } else {
             runCatching {
-                StorageVolume::class.java.getMethod("getDescription")
+                // Looked up by name: StorageVolume itself only exists from API 24, and this branch
+                // is the one that runs below it.
+                Class.forName("android.os.storage.StorageVolume")
+                    .getMethod("getDescription")
                     .invoke(volume) as String
             }.getOrElse { volume.toString() }
         }

@@ -3,7 +3,7 @@
 ## 项目定位
 - Android TV 启动器（Home screen 替代品），Kotlin + Jetpack Compose + **androidx.tv.material3**（不是 mobile material3）。
 - 单一 Gradle 模块 `:app`，根包 `com.github.honqout.tvlauncher3`，namespace = applicationId。
-- minSdk 24 / compileSdk 36 / targetSdk 36（2026-09-17 核对 `app/build.gradle.kts`，此前记的 37 已过时），JVM 17，AGP 9.x + Kotlin 2.x + KSP + Hilt + Protobuf。
+- minSdk 23 / compileSdk 36 / targetSdk 36（2026-09-18 核对；minSdk 当天从 24 降到 23，因此 API 24+ 的调用必须显式 `Build.VERSION.SDK_INT >= N` 守卫，否则 lint 报 NewApi error），JVM 17，AGP 9.x + Kotlin 2.x + KSP + Hilt + Protobuf。
 
 ## 分层与架构约定（当前事实）
 - `ui/launcher/activity` 只放 `MainActivity`（承载 3 个 tab 的 ViewModel 并向下传递）。
@@ -38,8 +38,12 @@ sh gradlew :app:lintDebug              # 静态检查（本仓库 lint 是硬门
 - `gradlew` 没有执行权限，必须用 `sh gradlew`。
 - `gradle/libs.versions.toml` 里给 `androidTestImplementation` 也必须单独加 `platform(libs.androidx.compose.bom)`，否则 androidTest 类路径版本解析为空、`lintDebug` 直接失败。
 
+- **README 以代码为准**（2026-09-18 起）：功能描述出现不一致时改 README，不动代码（除了真 bug）。README 已删除"输入源屏幕"声明，并补上文件浏览器/壁纸/时钟/设置入口清单。
+- `MainActivity` 的 intent-filter **只有 `MAIN` + `CATEGORY_HOME` + `DEFAULT`**，不再声明 `CATEGORY_LAUNCHER`/`CATEGORY_LEANBACK_LAUNCHER`（启动器不把自己列进应用列表）；因为还声明了 `android.software.leanback` feature，manifest 根节点用 `tools:ignore="MissingLeanbackLauncher"` 抑制这条 lint（与既有的 ScopedStorage/PackageVisibilityPolicy 抑制同一套路）。
+
 ## README 声明的功能 ↔ 实现现状
 1. 主屏固定常用应用 — 已实现（长按菜单 移除/替换）。
-2. 列出可启动应用并可管理 — 已实现（启动/卸载/详情/应用市场）；无搜索、无首字母索引、无手动排序。
-3. 输入源屏幕（README 标注 Experimental）— **未实现**。`baseline_hdmi_port_24`、`baseline_serial_port_24`、`baseline_video_input_*`、`baseline_television_classic_24`、`baseline_settings_input_hdmi_24` 与 `R.string.signal_source` 是为该功能预留的资源，因此它们会一直产生 UnusedResources 告警，**这是有意保留，不要误删**。
+2. 列出可启动应用并可管理 — 已实现（启动/卸载/详情/应用市场）；无搜索、无首字母索引、无手动排序。**已知缺口（2026-09-18 审查确认）**：只枚举 `LauncherActivityType.NORMAL`（`CATEGORY_LAUNCHER`），从不查 `LEANBACK`，所以只声明 leanback launcher 的纯 TV 应用不会出现在 Apps 页 / 应用选择器里；`ApplicationUtils` 的 LEANBACK 分支与 Manifest 的 LEANBACK `<queries>` 目前都是死代码。
+3. 输入源屏幕 — **代码里没有，README 已按"以代码为准"删掉该声明**。`baseline_hdmi_port_24`、`baseline_serial_port_24`、`baseline_video_input_*`、`baseline_television_classic_24`、`baseline_settings_input_hdmi_24` 与 `R.string.signal_source` 仍是为该功能预留的资源，会一直产生 UnusedResources 告警（8 条），**这是有意保留，不要误删**。
 4. 常用系统设置入口 — 已实现（10 个入口，均带 component→action 回退）。
+5. README 另外声明的（代码确有）：文件浏览器（浏览内置/可移动存储、默认应用打开文件、Menu 键删除，10 个设置入口之外的第 4 条）、系统壁纸+时钟。

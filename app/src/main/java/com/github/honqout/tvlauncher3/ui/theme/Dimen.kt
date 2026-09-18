@@ -9,6 +9,9 @@ val FONT_SIZE_SMALL = 14.sp
 val FONT_SIZE_MEDIUM = 16.sp
 val FONT_SIZE_LARGE = 18.sp
 val FONT_SIZE_EXTRA_LARGE = 20.sp
+// Headline sizes, above the body scale: detail titles and dialog titles.
+val FONT_SIZE_HEADLINE = 22.sp
+val FONT_SIZE_DIALOG_TITLE = 24.sp
 
 // Space
 val SPACE_MEDIUM = 10.dp
