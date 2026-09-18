@@ -1,7 +1,12 @@
 package com.github.honqout.tvlauncher3.ui.launcher.viewmodel
 
+import android.Manifest
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Environment
@@ -9,6 +14,7 @@ import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
 import android.util.Log
 import android.webkit.MimeTypeMap
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -50,11 +57,61 @@ class FilesViewModel @Inject constructor(application: Application) :
         private const val TAG: String = "FilesViewModel"
     }
 
+    // 监听 U 盘/外置存储挂载与卸载,自动刷新卷列表
+    private val mediaReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_MEDIA_MOUNTED,
+                Intent.ACTION_MEDIA_UNMOUNTED,
+                Intent.ACTION_MEDIA_EJECT,
+                Intent.ACTION_MEDIA_REMOVED -> {
+                    // 若正在浏览的目录可能已被卸载,回到卷列表重新加载
+                    _currentDir.update { null }
+                    refresh()
+                }
+            }
+        }
+    }
+
+    init {
+        runCatching {
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_MEDIA_MOUNTED)
+                addAction(Intent.ACTION_MEDIA_UNMOUNTED)
+                addAction(Intent.ACTION_MEDIA_EJECT)
+                addAction(Intent.ACTION_MEDIA_REMOVED)
+                addDataScheme("file")
+            }
+            ContextCompat.registerReceiver(
+                getApplication(),
+                mediaReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        }.onFailure {
+            Log.e(TAG, "Failed to register media receiver.", it)
+        }
+    }
+
+    override fun onCleared() {
+        runCatching { getApplication<Application>().unregisterReceiver(mediaReceiver) }
+        super.onCleared()
+    }
+
     fun hasAllFilesAccess(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            true
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                Environment.isExternalStorageManager()
+            // Android 6~9 需要 READ+WRITE 才能读和删;Q+ 写权限已废弃,只查 READ
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ->
+                ContextCompat.checkSelfPermission(
+                    getApplication(), Manifest.permission.READ_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED &&
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
+                        ContextCompat.checkSelfPermission(
+                            getApplication(), Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        ) == PackageManager.PERMISSION_GRANTED)
+            else -> true
         }
     }
 
@@ -102,6 +159,24 @@ class FilesViewModel @Inject constructor(application: Application) :
         refresh()
     }
 
+    /**
+     * 删除文件或整个文件夹,成功后刷新列表,回调在主线程返回。
+     */
+    fun deleteItem(item: FileItem, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = runCatching {
+                val file = File(item.path)
+                if (item.isDirectory) file.deleteRecursively() else file.delete()
+            }.getOrDefault(false)
+            if (ok) {
+                refresh()
+            }
+            withContext(Dispatchers.Main) {
+                onResult(ok)
+            }
+        }
+    }
+
     private fun loadVolumes() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
@@ -116,13 +191,58 @@ class FilesViewModel @Inject constructor(application: Application) :
                 )
             )
             runCatching {
+                val sm = context.getSystemService(StorageManager::class.java)
+                val vols = storageVolumes(context)
+                Log.i(
+                    TAG,
+                    "volumes count=${vols.size} " +
+                        "desc=${vols.joinToString { volumeDescription(context, it) }}"
+                )
+                Log.i(
+                    TAG,
+                    "externalFilesDirs=" +
+                        context.getExternalFilesDirs(null).filterNotNull()
+                            .joinToString { it.absolutePath }
+                )
+                val storageListing = File("/storage").list()
+                Log.i(TAG, "/storage listing=${storageListing?.joinToString()}")
                 appendRemovableVolumes(context, primaryDir.absolutePath, volumeList)
             }.onFailure {
                 Log.e(TAG, "Failed to load storage volumes.", it)
             }
+            Log.i(TAG, "final volumes=${volumeList.joinToString { it.path }}")
             _items.value = volumeList
         }
     }
+
+    /**
+     * 兼容取存储卷列表:getStorageVolumes() 是 API 24+,Android 6(API 23) 用 getVolumeList()。
+     * 新 compileSdk 已移除 getVolumeList,故 Android 6 上走反射调用(系统 API 不参与混淆)。
+     */
+    private fun storageVolumes(context: Context): List<StorageVolume> {
+        val sm = context.getSystemService(StorageManager::class.java) ?: return emptyList()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return sm.storageVolumes
+        }
+        return runCatching {
+            @Suppress("UNCHECKED_CAST")
+            StorageManager::class.java.getMethod("getVolumeList")
+                .invoke(sm) as Array<StorageVolume>
+        }.getOrElse { emptyArray() }.toList()
+    }
+
+    /**
+     * 兼容取卷描述:getDescription(Context) 是 API 24+,Android 6 用无参版本(新 SDK 已移除,走反射)。
+     */
+    private fun volumeDescription(context: Context, volume: StorageVolume): String =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            volume.getDescription(context)
+        } else {
+            runCatching {
+                StorageVolume::class.java.getMethod("getDescription")
+                    .invoke(volume) as String
+            }.getOrElse { volume.toString() }
+        }
 
     /**
      * Append every storage volume except the primary one.
@@ -132,8 +252,7 @@ class FilesViewModel @Inject constructor(application: Application) :
         primaryPath: String,
         out: MutableList<FileItem>
     ) {
-        val storageManager = context.getSystemService(StorageManager::class.java) ?: return
-        val volumes = storageManager.storageVolumes
+        val volumes = storageVolumes(context)
         // The returned paths are ordered consistently with StorageManager.getStorageVolumes().
         val externalFilesDirs = context.getExternalFilesDirs(null).filterNotNull()
         volumes.forEachIndexed { index, volume ->
@@ -144,12 +263,37 @@ class FilesViewModel @Inject constructor(application: Application) :
             }
             out.add(
                 FileItem(
-                    name = volume.getDescription(context),
+                    name = volumeDescription(context, volume),
                     path = root,
                     isDirectory = true,
                     isVolume = true
                 )
             )
+        }
+        // 兜底:Android 6~7 上 getExternalFilesDirs 对 U 盘卷常返回 null,
+        // 直接枚举 /storage/ 下实际存在的目录(排除主存储与 self)。
+        // 不用 isDirectory 过滤:挂载异常时卷目录会返回 false,但仍应显示。
+        if (out.size <= 1) {
+            runCatching {
+                File("/storage").listFiles()?.forEach { dir ->
+                    val p = dir.absolutePath
+                    val name = dir.name
+                    if (name != "emulated" && name != "self" &&
+                        p != primaryPath && out.none { it.path == p }
+                    ) {
+                        out.add(
+                            FileItem(
+                                name = dir.name,
+                                path = p,
+                                isDirectory = true,
+                                isVolume = true
+                            )
+                        )
+                    }
+                }
+            }.onFailure {
+                Log.e(TAG, "Failed to enumerate /storage/.", it)
+            }
         }
     }
 

@@ -1,6 +1,10 @@
 package com.github.honqout.tvlauncher3.ui.launcher.activity
 
 import android.app.WallpaperManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -8,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.TextClock
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -68,6 +73,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -186,6 +192,52 @@ class MainActivity : ComponentActivity() {
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val filesViewModel: FilesViewModel by viewModels()
 
+    // 全局监听 U 盘/外置存储挂载,插入时提示并刷新文件列表
+    private val usbReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_MEDIA_MOUNTED -> {
+                    Toast.makeText(
+                        this@MainActivity,
+                        R.string.external_storage_found,
+                        Toast.LENGTH_LONG
+                    ).show()
+                    filesViewModel.refresh()
+                }
+                Intent.ACTION_MEDIA_UNMOUNTED,
+                Intent.ACTION_MEDIA_EJECT,
+                Intent.ACTION_MEDIA_REMOVED -> {
+                    filesViewModel.refresh()
+                }
+            }
+        }
+    }
+
+    private fun registerUsbReceiver() {
+        runCatching {
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_MEDIA_MOUNTED)
+                addAction(Intent.ACTION_MEDIA_UNMOUNTED)
+                addAction(Intent.ACTION_MEDIA_EJECT)
+                addAction(Intent.ACTION_MEDIA_REMOVED)
+                addDataScheme("file")
+            }
+            ContextCompat.registerReceiver(
+                this,
+                usbReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        }.onFailure {
+            Log.e(TAG, "Failed to register usb receiver.", it)
+        }
+    }
+
+    override fun onDestroy() {
+        runCatching { unregisterReceiver(usbReceiver) }
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Hide status bar and navigation bar
@@ -194,6 +246,8 @@ class MainActivity : ComponentActivity() {
         window.decorView.post {
             UIUtils.handleSystemBarsVisibility(window, false)
         }
+
+        registerUsbReceiver()
 
         setContent {
             DisposableEffect(Unit) {
