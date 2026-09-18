@@ -84,18 +84,25 @@ class ApplicationUtils {
             }
         }
 
-        fun getApplicationBanner(context: Context, packageName: String?): Drawable {
-            val pm = context.packageManager
+        /**
+         * The application banner, or null when the package has none, is unknown, or doesn't exist.
+         */
+        private fun getApplicationBannerOrNull(context: Context, packageName: String?): Drawable? {
             if (packageName.isNullOrEmpty()) {
                 Log.e(TAG, "Cannot get application banner. The given packageName is null or empty.")
-                return pm.defaultActivityIcon
+                return null
             }
-            try {
-                return pm.getApplicationBanner(packageName) ?: pm.defaultActivityIcon
+            return try {
+                context.packageManager.getApplicationBanner(packageName)
             } catch (e: PackageManager.NameNotFoundException) {
                 Log.e(TAG, "Cannot get application banner. Package $packageName doesn't exist.", e)
-                return pm.defaultActivityIcon
+                null
             }
+        }
+
+        fun getApplicationBanner(context: Context, packageName: String?): Drawable {
+            return getApplicationBannerOrNull(context, packageName)
+                ?: context.packageManager.defaultActivityIcon
         }
 
         fun getApplicationLabel(context: Context, packageName: String): String? {
@@ -205,7 +212,7 @@ class ApplicationUtils {
                 )
                 return Pair(IconType.Icon, pm.defaultActivityIcon)
             }
-            val banner = pm.getApplicationBanner(packageName)
+            val banner = getApplicationBannerOrNull(context, packageName)
             return if (banner != null) {
                 Pair(IconType.Banner, banner)
             } else {
@@ -223,7 +230,7 @@ class ApplicationUtils {
             if (packageName.isNullOrEmpty()) {
                 return IconType.Icon
             }
-            val banner = context.packageManager.getApplicationBanner(packageName)
+            val banner = getApplicationBannerOrNull(context, packageName)
             return if (banner != null) {
                 IconType.Banner
             } else {

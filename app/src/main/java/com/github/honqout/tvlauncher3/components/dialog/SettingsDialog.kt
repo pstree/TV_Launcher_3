@@ -36,6 +36,95 @@ import com.github.honqout.tvlauncher3.ui.theme.SETTINGS_ACTION_BUTTON_WIDTH
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_HORIZONTAL
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_VERTICAL
 import com.github.honqout.tvlauncher3.utils.IntentUtils
+import androidx.compose.foundation.lazy.grid.items
+
+/**
+ * One entry of the settings panel. [componentPackage]/[componentActivity] target the exact OEM
+ * Settings component; when they are null (or missing on the device) [fallbackAction] is used.
+ */
+private data class SettingsEntry(
+    val iconRes: Int,
+    val titleRes: Int,
+    val descriptionRes: Int? = null,
+    val componentPackage: String? = null,
+    val componentActivity: String? = null,
+    val fallbackAction: String
+)
+
+private val settingsEntries = listOf(
+    SettingsEntry(
+        iconRes = R.drawable.baseline_settings_24,
+        titleRes = R.string.settings,
+        descriptionRes = R.string.settings,
+        componentPackage = "com.android.settings",
+        componentActivity = "com.android.settings.Settings",
+        fallbackAction = Settings.ACTION_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_settings_24,
+        titleRes = R.string.tv_settings,
+        descriptionRes = R.string.tv_settings,
+        componentPackage = "com.android.tv.settings",
+        componentActivity = "com.android.tv.settings.MainSettings",
+        fallbackAction = Settings.ACTION_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_wifi_24,
+        titleRes = R.string.wlan,
+        descriptionRes = R.string.settings,
+        fallbackAction = Settings.ACTION_WIFI_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_web_24,
+        titleRes = R.string.internet,
+        descriptionRes = R.string.tv_settings,
+        componentPackage = "com.android.tv.settings",
+        componentActivity = "com.android.tv.settings.connectivity.NetworkActivity",
+        fallbackAction = Settings.ACTION_WIRELESS_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_bluetooth_24,
+        titleRes = R.string.bluetooth,
+        descriptionRes = R.string.settings,
+        fallbackAction = Settings.ACTION_BLUETOOTH_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_settings_remote_24,
+        titleRes = R.string.accessory,
+        descriptionRes = R.string.tv_settings,
+        componentPackage = "com.android.tv.settings",
+        componentActivity = "com.android.tv.settings.accessories.AddAccessoryActivity",
+        fallbackAction = Settings.ACTION_BLUETOOTH_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_speaker_24,
+        titleRes = R.string.sound,
+        descriptionRes = R.string.settings,
+        fallbackAction = Settings.ACTION_SOUND_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_speaker_24,
+        titleRes = R.string.sound,
+        descriptionRes = R.string.tv_settings,
+        componentPackage = "com.android.tv.settings",
+        componentActivity = "com.android.tv.settings.device.sound.SoundActivity",
+        fallbackAction = Settings.ACTION_SOUND_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_tv_24,
+        titleRes = R.string.display,
+        descriptionRes = R.string.settings,
+        fallbackAction = Settings.ACTION_DISPLAY_SETTINGS
+    ),
+    SettingsEntry(
+        iconRes = R.drawable.baseline_settings_system_daydream_24,
+        titleRes = R.string.screen_saver,
+        descriptionRes = R.string.tv_settings,
+        componentPackage = "com.android.tv.settings",
+        componentActivity = "com.android.tv.settings.device.display.daydream.DaydreamActivity",
+        fallbackAction = Settings.ACTION_DREAM_SETTINGS
+    )
+)
 
 @Composable
 fun SettingsDialog(
@@ -124,146 +213,36 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_HORIZONTAL),
                     userScrollEnabled = true
                 ) {
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_settings_24,
-                            contentDescriptionRes = R.string.settings,
-                            titleRes = R.string.settings,
-                            onShortClick = {
+                    items(settingsEntries) { entry ->
+                        val onShortClick = {
+                            if (entry.componentPackage != null &&
+                                entry.componentActivity != null
+                            ) {
                                 launchSettingsActivity(
-                                    "com.android.settings",
-                                    "com.android.settings.Settings",
-                                    Settings.ACTION_SETTINGS
+                                    entry.componentPackage,
+                                    entry.componentActivity,
+                                    entry.fallbackAction
                                 )
+                            } else {
+                                launchSettingsAction(entry.fallbackAction)
                             }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_settings_24,
-                            contentDescriptionRes = R.string.tv_settings,
-                            titleRes = R.string.tv_settings,
-                            onShortClick = {
-                                launchSettingsActivity(
-                                    "com.android.tv.settings",
-                                    "com.android.tv.settings.MainSettings",
-                                    Settings.ACTION_SETTINGS
-                                )
-                            }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_wifi_24,
-                            contentDescriptionRes = R.string.wlan,
-                            titleRes = R.string.wlan,
-                            descriptionRes = R.string.settings,
-                            onShortClick = {
-                                launchSettingsAction(Settings.ACTION_WIFI_SETTINGS)
-                            },
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_web_24,
-                            contentDescriptionRes = R.string.internet,
-                            titleRes = R.string.internet,
-                            descriptionRes = R.string.tv_settings,
-                            onShortClick = {
-                                launchSettingsActivity(
-                                    "com.android.tv.settings",
-                                    "com.android.tv.settings.connectivity.NetworkActivity",
-                                    Settings.ACTION_WIRELESS_SETTINGS
-                                )
-                            }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_bluetooth_24,
-                            contentDescriptionRes = R.string.bluetooth,
-                            titleRes = R.string.bluetooth,
-                            descriptionRes = R.string.settings,
-                            onShortClick = {
-                                launchSettingsAction(Settings.ACTION_BLUETOOTH_SETTINGS)
-                            }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_settings_remote_24,
-                            contentDescriptionRes = R.string.accessory,
-                            titleRes = R.string.accessory,
-                            descriptionRes = R.string.tv_settings,
-                            onShortClick = {
-                                launchSettingsActivity(
-                                    "com.android.tv.settings",
-                                    "com.android.tv.settings.accessories.AddAccessoryActivity",
-                                    Settings.ACTION_BLUETOOTH_SETTINGS
-                                )
-                            }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_speaker_24,
-                            contentDescriptionRes = R.string.sound,
-                            titleRes = R.string.sound,
-                            descriptionRes = R.string.settings,
-                            onShortClick = {
-                                launchSettingsAction(Settings.ACTION_SOUND_SETTINGS)
-                            }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_speaker_24,
-                            contentDescriptionRes = R.string.sound,
-                            titleRes = R.string.sound,
-                            descriptionRes = R.string.tv_settings,
-                            onShortClick = {
-                                launchSettingsActivity(
-                                    "com.android.tv.settings",
-                                    "com.android.tv.settings.device.sound.SoundActivity",
-                                    Settings.ACTION_SOUND_SETTINGS
-                                )
-                            }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_tv_24,
-                            contentDescriptionRes = R.string.display,
-                            titleRes = R.string.display,
-                            descriptionRes = R.string.settings,
-                            onShortClick = {
-                                launchSettingsAction(Settings.ACTION_DISPLAY_SETTINGS)
-                            }
-                        )
-                    }
-
-                    item {
-                        SettingsActionButtonTv(
-                            iconRes = R.drawable.baseline_settings_system_daydream_24,
-                            contentDescriptionRes = R.string.screen_saver,
-                            titleRes = R.string.screen_saver,
-                            descriptionRes = R.string.tv_settings,
-                            onShortClick = {
-                                launchSettingsActivity(
-                                    "com.android.tv.settings",
-                                    "com.android.tv.settings.device.display.daydream.DaydreamActivity",
-                                    Settings.ACTION_DREAM_SETTINGS
-                                )
-                            }
-                        )
+                        }
+                        if (entry.descriptionRes != null) {
+                            SettingsActionButtonTv(
+                                iconRes = entry.iconRes,
+                                contentDescriptionRes = entry.titleRes,
+                                titleRes = entry.titleRes,
+                                descriptionRes = entry.descriptionRes,
+                                onShortClick = onShortClick
+                            )
+                        } else {
+                            SettingsActionButtonTv(
+                                iconRes = entry.iconRes,
+                                contentDescriptionRes = entry.titleRes,
+                                titleRes = entry.titleRes,
+                                onShortClick = onShortClick
+                            )
+                        }
                     }
                 }
             }

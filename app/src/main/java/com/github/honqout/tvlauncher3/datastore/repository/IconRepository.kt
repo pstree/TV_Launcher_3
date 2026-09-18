@@ -123,18 +123,29 @@ class IconRepository @Inject constructor(
      * launcher activity of that package (e.g. it was renamed or removed by an update).
      */
     suspend fun resetIconAfterPackageReplaced(context: Context, packageName: String) {
-        dataStore.updateData { currentData ->
-            val updatedList = currentData.itemsList.map { item ->
-                if (item.packageName != packageName) {
-                    return@map item
-                }
+        // Resolve the launcher activities BEFORE taking the DataStore update lock: the PM call is
+        // an IPC and must not run inside updateData, which serialises all DataStore writes.
+        val staleIndices = dataStore.data.first().itemsList
+            .filter { it.packageName == packageName }
+            .mapNotNull { item ->
                 val resolveInfo = ApplicationUtils.getLauncherActivity(
                     context,
                     LauncherActivityType.NORMAL,
                     item.packageName,
                     item.activityName
                 )
-                if (resolveInfo == null) createEmptyIcon(item.index) else item
+                if (resolveInfo == null) item.index else null
+            }
+        if (staleIndices.isEmpty()) {
+            return
+        }
+        dataStore.updateData { currentData ->
+            val updatedList = currentData.itemsList.map { item ->
+                if (item.index in staleIndices && item.packageName == packageName) {
+                    createEmptyIcon(item.index)
+                } else {
+                    item
+                }
             }
             IconItems.newBuilder().clearItems().addAllItems(updatedList).build()
         }

@@ -18,7 +18,6 @@ import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.LauncherActivityType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -134,7 +133,7 @@ class LauncherViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        viewModelScope.cancel()
+        // viewModelScope is cancelled by the framework; only the broadcast receiver needs care.
         unregisterPackageBR()
         super.onCleared()
     }
@@ -290,20 +289,16 @@ class LauncherViewModel @Inject constructor(
                     mutableList
                 }
             }
-            // Add
+            // Add. The PackageManager query runs OUTSIDE the StateFlow update: update's lambda can
+            // be re-executed on CAS failure, which would duplicate the IPC-heavy query.
             if (op == AppListOp.ADD || op == AppListOp.REPLACE) {
+                val addedModels = ApplicationUtils.getActivityModelList(
+                    getApplication(),
+                    LauncherActivityType.NORMAL,
+                    packageName
+                )
                 _activityModelList.update { currentList ->
-                    val mutableList = currentList.toMutableList()
-                    val addResult = mutableList.addAll(
-                        ApplicationUtils.getActivityModelList(
-                            getApplication(),
-                            LauncherActivityType.NORMAL,
-                            packageName
-                        ).toMutableList()
-                    )
-                    Log.i(TAG, "Added items to ActivityModel list: $addResult")
-                    // Must sort the list after adding items
-                    sortActivityModelList(mutableList)
+                    sortActivityModelList(currentList + addedModels)
                 }
             }
             // Restore focused item

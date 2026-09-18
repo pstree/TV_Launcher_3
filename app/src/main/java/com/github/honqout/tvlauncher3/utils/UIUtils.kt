@@ -5,6 +5,8 @@ import android.view.Window
 
 class UIUtils {
     companion object {
+        // systemUiVisibility 在 API 30+ 已弃用,但为兼容 Android 6~29 的 TV 设备刻意保留。
+        @Suppress("DEPRECATION")
         fun handleSystemBarsVisibility(window: Window, visible: Boolean) {
             // 传统 systemUiVisibility flags, 兼容低版本(Android 6), 隐藏系统状态栏时间等
             window.decorView.systemUiVisibility = if (visible) {

@@ -3,7 +3,6 @@ package com.github.honqout.tvlauncher3.components.button
 import android.graphics.drawable.Drawable
 import android.view.KeyEvent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,26 +50,16 @@ private fun RoundRectButtonTvImpl(
     Surface(
         modifier = modifier
             .focusRequester(focusRequester)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onShortClick() },
-                    onLongPress = { onLongClick() }
-                )
-            }
+            // Touch taps and long presses are handled by the Surface's onClick/onLongClick; the
+            // remote's menu key is not, so it needs its own key handler.
             .onKeyEvent { keyEvent ->
-                when (keyEvent.key) {
-                    Key.Menu -> {
-                        when (keyEvent.nativeKeyEvent.action) {
-                            KeyEvent.ACTION_UP -> {
-                                onMenuOpen()
-                                true
-                            }
-
-                            else -> false
-                        }
-                    }
-
-                    else -> false
+                if (keyEvent.key == Key.Menu &&
+                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP
+                ) {
+                    onMenuOpen()
+                    true
+                } else {
+                    false
                 }
             },
         onClick = onShortClick,
@@ -87,8 +75,9 @@ private fun RoundRectButtonTvImpl(
         )
     ) {
         Column(
-            modifier = modifier
-                .wrapContentSize(),
+            // Do NOT reuse the caller's modifier here: it is already applied to the Surface above,
+            // and applying it twice would duplicate focus listeners and size modifiers.
+            modifier = Modifier.wrapContentSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

@@ -13,6 +13,7 @@ import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
 import android.util.Log
 import android.webkit.MimeTypeMap
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
@@ -56,11 +57,20 @@ class FilesViewModel @Inject constructor(application: Application) :
         private const val TAG: String = "FilesViewModel"
     }
 
-    // 监听 U 盘/外置存储挂载与卸载,自动刷新卷列表
+    // 监听 U 盘/外置存储挂载与卸载,自动刷新卷列表;挂载时提示用户
     private val mediaReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_MEDIA_MOUNTED,
+                Intent.ACTION_MEDIA_MOUNTED -> {
+                    Toast.makeText(
+                        getApplication(),
+                        R.string.external_storage_found,
+                        Toast.LENGTH_LONG
+                    ).show()
+                    _currentDir.update { null }
+                    refresh()
+                }
+
                 Intent.ACTION_MEDIA_UNMOUNTED,
                 Intent.ACTION_MEDIA_EJECT,
                 Intent.ACTION_MEDIA_REMOVED -> {
@@ -185,24 +195,15 @@ class FilesViewModel @Inject constructor(application: Application) :
             runCatching {
                 val sm = context.getSystemService(StorageManager::class.java)
                 val vols = storageVolumes(context)
-                Log.i(
+                Log.d(
                     TAG,
                     "volumes count=${vols.size} " +
                         "desc=${vols.joinToString { volumeDescription(context, it) }}"
                 )
-                Log.i(
-                    TAG,
-                    "externalFilesDirs=" +
-                        context.getExternalFilesDirs(null).filterNotNull()
-                            .joinToString { it.absolutePath }
-                )
-                val storageListing = File("/storage").list()
-                Log.i(TAG, "/storage listing=${storageListing?.joinToString()}")
                 appendRemovableVolumes(context, primaryDir.absolutePath, volumeList)
             }.onFailure {
                 Log.e(TAG, "Failed to load storage volumes.", it)
             }
-            Log.i(TAG, "final volumes=${volumeList.joinToString { it.path }}")
             _items.value = volumeList
         }
     }

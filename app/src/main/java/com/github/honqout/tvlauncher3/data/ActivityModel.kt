@@ -6,10 +6,10 @@ import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.IconType
 
 data class ActivityModel(
-    var packageName: String,
-    var activityName: String,
-    var label: String = "",
-    var iconType: IconType = IconType.Icon
+    val packageName: String,
+    val activityName: String,
+    val label: String = "",
+    val iconType: IconType = IconType.Icon
 ) {
     companion object {
         /**

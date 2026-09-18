@@ -79,7 +79,15 @@ fun HomeScreen(
             ) {
                 itemsIndexed(
                     items = fixedIconList,
-                    key = { index, item -> "key_${index}_${item?.packageName ?: "null"}_${item?.activityName ?: "null"}" }
+                    key = { index, item ->
+                        // Same app can be pinned to two slots, so the position must stay part of
+                        // the key; the content makes the key change when a slot is reassigned.
+                        if (item != null) {
+                            "${index}_${item.packageName}:${item.activityName}"
+                        } else {
+                            "empty_$index"
+                        }
+                    }
                 ) { index, item ->
                     AppShortcutButtonTv(
                         activityModel = item,
@@ -125,7 +133,7 @@ fun HomeScreen(
         ) {
             AppListDialog(
                 viewModel = viewModel,
-                onItemChosen = { _, activityModel ->
+                onItemChosen = { activityModel ->
                     viewModel.setIcon(
                         position = null,
                         item = activityModel

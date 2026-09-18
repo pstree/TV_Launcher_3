@@ -192,34 +192,6 @@ class IntentUtils {
         }
 
         /**
-         * Launch an app's launcher activity. This will launch the Leanback Launch Intent which is
-         * designed for TV prior to the Launch Intent which is designed for phone and tablet. If
-         * both intents are null, LaunchActivityIntent.NOT_FOUND will be returned.
-         */
-        fun launchApp(
-            context: Context,
-            packageName: String,
-            newTask: Boolean
-        ): LaunchActivityResult {
-            val pm = context.packageManager
-            val leanbackIntent = pm.getLeanbackLaunchIntentForPackage(packageName)
-            val intent = pm.getLaunchIntentForPackage(packageName)
-            if (leanbackIntent != null) {
-                if (newTask) {
-                    leanbackIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                return launchActivity(context, leanbackIntent)
-            } else if (intent != null) {
-                if (newTask) {
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                return launchActivity(context, intent)
-            } else {
-                return LaunchActivityResult.NOT_FOUND
-            }
-        }
-
-        /**
          * Request to uninstall an application.
          */
         fun requestUninstallApp(context: Context, packageName: String): LaunchIntentResult {

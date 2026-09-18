@@ -51,7 +51,7 @@ import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_VERTICAL
 @Composable
 fun AppListDialog(
     viewModel: LauncherViewModel = hiltViewModel(),
-    onItemChosen: (index: Int, activityModel: ActivityModel) -> Unit = { _, _ -> },
+    onItemChosen: (activityModel: ActivityModel) -> Unit = {},
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -129,7 +129,7 @@ fun AppListDialog(
                         contentDefaultColor = ButtonContentDefault,
                         contentFocusedColor = ButtonContentFocused,
                         onShortClick = {
-                            onItemChosen(index, item)
+                            onItemChosen(item)
                             onDismissRequest()
                         }
                     )

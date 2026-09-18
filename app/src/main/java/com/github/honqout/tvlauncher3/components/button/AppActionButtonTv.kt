@@ -1,9 +1,7 @@
 package com.github.honqout.tvlauncher3.components.button
 
-import android.view.KeyEvent
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,10 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,30 +38,11 @@ fun AppActionButtonTv(
 ) {
     Button(
         onClick = onShortClick,
+        // tv-material Button already handles touch taps and DPAD-center/Enter activation via
+        // onClick; no extra pointerInput or key-event layer on top of it.
         modifier = modifier
             .wrapContentHeight()
-            .fillMaxWidth()
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onShortClick() }
-                )
-            }
-            .onKeyEvent { keyEvent ->
-                when (keyEvent.key) {
-                    Key.Enter -> {
-                        when (keyEvent.nativeKeyEvent.action) {
-                            KeyEvent.ACTION_UP -> {
-                                onShortClick()
-                                true
-                            }
-
-                            else -> false
-                        }
-                    }
-
-                    else -> false
-                }
-            },
+            .fillMaxWidth(),
         onLongClick = {},
         enabled = true,
         scale = ButtonDefaults.scale(),
