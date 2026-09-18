@@ -43,6 +43,13 @@
     <string name="delete_confirm_message">Delete \"%s\"?</string>
     <string name="delete_failed">Delete failed.</string>
     <string name="external_storage_found">External storage detected. The file list has been updated.</string>
+    <string name="copy">Copy</string>
+    <string name="paste">Paste</string>
+    <string name="copy_done">Copied \"%s\". Choose Paste in the target folder.</string>
+    <string name="paste_done">Pasted \"%s\".</string>
+    <string name="paste_failed">Paste failed.</string>
+    <string name="install_permission_required">Allow this app to install unknown apps, then try again.</string>
+    <string name="install_failed">Cannot start the installer.</string>
 
     <!-- Hint -->
     <string name="activity_belongs_to">\"%s\" belongs to the following app:</string>

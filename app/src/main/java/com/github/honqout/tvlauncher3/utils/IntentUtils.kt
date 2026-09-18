@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -237,6 +238,35 @@ class IntentUtils {
                 Log.e(TAG, "Cannot launch Settings because requested package cannot be found.", e)
                 return LaunchIntentResult.NO_MATCHING_ACTIVITY
             }
+        }
+
+        /**
+         * Open the "install unknown apps" page of the given application, so the user can allow this
+         * app to send apk install intents. The page only exists from API 26, and some OEM builds
+         * don't ship it at all, hence the fallback to the application details page.
+         */
+        fun launchUnknownAppSourcesSettings(
+            context: Context,
+            packageName: String
+        ): LaunchIntentResult {
+            if (packageName.isEmpty()) {
+                Log.e(
+                    TAG,
+                    "Cannot launch Settings because the given packageName is null or empty."
+                )
+                return LaunchIntentResult.URI_IS_EMPTY
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    setData(Uri.fromParts("package", packageName, null))
+                    setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (launchActivity(context, intent) == LaunchActivityResult.SUCCESS) {
+                    return LaunchIntentResult.SUCCESS
+                }
+                Log.i(TAG, "Cannot find unknown app sources settings. Falling back to app details.")
+            }
+            return launchApplicationDetailsSettings(context, packageName)
         }
 
         fun openAppInMarket(context: Context, packageName: String): LaunchIntentResult {

@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import android.provider.Settings
 import android.view.KeyEvent
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.honqout.tvlauncher3.R
+import com.github.honqout.tvlauncher3.components.dialog.FileActionDialog
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_LARGE
 import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainerDark
@@ -70,10 +73,19 @@ fun FilesScreen(
     val currentDir by viewModel.currentDir.collectAsStateWithLifecycle()
     val items by viewModel.items.collectAsStateWithLifecycle()
     val showPermissionDialog by viewModel.showPermissionDialog.collectAsStateWithLifecycle()
+    val clipboard by viewModel.clipboard.collectAsStateWithLifecycle()
 
     // 待删除的文件/文件夹(按设置键弹出确认框);deleteFailed 用于提示删除失败
     var pendingDelete by remember { mutableStateOf<FilesViewModel.FileItem?>(null) }
     var deleteFailed by remember { mutableStateOf(false) }
+
+    // 菜单键操作面板:actionTarget 为当前焦点项,为 null 表示只提供粘贴(空目录/卷列表)
+    var focusedItem by remember { mutableStateOf<FilesViewModel.FileItem?>(null) }
+    var showActionMenu by remember { mutableStateOf(false) }
+    var actionTarget by remember { mutableStateOf<FilesViewModel.FileItem?>(null) }
+
+    // 卷根目录既不能删也不能复制,粘贴必须有确定的当前目录
+    val canPaste = clipboard != null && currentDir != null
 
     // Android 6~12:点击授权后申请存储权限(低版本还需要写权限才能删除文件)
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -89,6 +101,11 @@ fun FilesScreen(
         viewModel.refresh()
     }
 
+    // 换目录后列表整批替换,旧焦点项已经不属于当前目录,必须丢弃
+    LaunchedEffect(currentDir) {
+        focusedItem = null
+    }
+
     BackHandler {
         if (currentDir != null) {
             viewModel.goUp()
@@ -99,6 +116,25 @@ fun FilesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(color = Color.Transparent)
+            // 遥控器菜单/设置键:对当前焦点项弹出 复制/粘贴/删除 面板。
+            // 放在列表外层是因为空目录里没有条目可按,此时只能用这个入口粘贴。
+            .onPreviewKeyEvent { event ->
+                val action = event.nativeKeyEvent.action
+                val keyCode = event.nativeKeyEvent.keyCode
+                val isMenuKey = action == KeyEvent.ACTION_DOWN &&
+                    (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS)
+                if (!isMenuKey) {
+                    return@onPreviewKeyEvent false
+                }
+                val target = focusedItem?.takeUnless { it.isVolume }
+                if (target == null && !canPaste) {
+                    false
+                } else {
+                    actionTarget = target
+                    showActionMenu = true
+                    true
+                }
+            }
     ) {
         Column(
             modifier = Modifier
@@ -132,15 +168,17 @@ fun FilesScreen(
                 horizontalArrangement = Arrangement.spacedBy(SPACE_LIST_CONTENT_HORIZONTAL),
                 userScrollEnabled = true
             ) {
-                itemsIndexed(items) { _, item ->
+                itemsIndexed(
+                    items = items,
+                    key = { _, item -> item.path }
+                ) { _, item ->
                     FileItemButton(
                         item = item,
                         onShortClick = {
                             viewModel.onItemClick(item)
                         },
-                        onMenuKey = {
-                            pendingDelete = item
-                            deleteFailed = false
+                        onFocused = {
+                            focusedItem = item
                         }
                     )
                 }
@@ -194,6 +232,48 @@ fun FilesScreen(
                 ) {
                     Text(text = stringResource(R.string.cancel))
                 }
+            }
+        )
+    }
+    if (showActionMenu) {
+        val target = actionTarget
+        FileActionDialog(
+            itemName = target?.name,
+            canPaste = canPaste,
+            onCopy = {
+                if (target != null) {
+                    viewModel.copyItem(target)
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.copy_done, target.name),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                showActionMenu = false
+            },
+            onPaste = {
+                val pastedName = clipboard?.name.orEmpty()
+                showActionMenu = false
+                viewModel.pasteItem { ok ->
+                    Toast.makeText(
+                        context,
+                        context.getString(
+                            if (ok) R.string.paste_done else R.string.paste_failed,
+                            pastedName
+                        ),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onDelete = {
+                showActionMenu = false
+                if (target != null) {
+                    deleteFailed = false
+                    pendingDelete = target
+                }
+            },
+            onDismissRequest = {
+                showActionMenu = false
             }
         )
     }
@@ -257,7 +337,7 @@ fun FilesScreen(
 private fun FileItemButton(
     item: FilesViewModel.FileItem,
     onShortClick: () -> Unit,
-    onMenuKey: () -> Unit
+    onFocused: () -> Unit
 ) {
     val iconRes = if (item.isDirectory) {
         R.drawable.baseline_folder_24
@@ -269,18 +349,10 @@ private fun FileItemButton(
         onClick = onShortClick,
         modifier = Modifier
             .fillMaxWidth()
-            // 遥控设置键(MENU)弹出删除确认
-            .onPreviewKeyEvent { event ->
-                val action = event.nativeKeyEvent.action
-                val keyCode = event.nativeKeyEvent.keyCode
-                if (action == KeyEvent.ACTION_DOWN &&
-                    (keyCode == KeyEvent.KEYCODE_MENU ||
-                        keyCode == KeyEvent.KEYCODE_SETTINGS)
-                ) {
-                    onMenuKey()
-                    true
-                } else {
-                    false
+            // 记录焦点位置,菜单键的操作对象就是它
+            .onFocusChanged { focusState ->
+                if (focusState.isFocused) {
+                    onFocused()
                 }
             },
         enabled = true,

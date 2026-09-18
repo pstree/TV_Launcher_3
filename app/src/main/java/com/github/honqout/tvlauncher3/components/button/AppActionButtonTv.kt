@@ -36,6 +36,7 @@ fun AppActionButtonTv(
     @DrawableRes iconRes: Int,
     @StringRes labelRes: Int,
     @StringRes contentDescriptionRes: Int = labelRes,
+    enabled: Boolean = true,
     onShortClick: () -> Unit = {}
 ) {
     Button(
@@ -46,11 +47,14 @@ fun AppActionButtonTv(
         modifier = modifier
             .wrapContentHeight()
             .fillMaxWidth()
-            .pointerInput(Unit) {
+            .pointerInput(enabled) {
+                if (!enabled) {
+                    return@pointerInput
+                }
                 detectTapGestures(onTap = { onShortClick() })
             },
         onLongClick = {},
-        enabled = true,
+        enabled = enabled,
         scale = ButtonDefaults.scale(),
         glow = ButtonDefaults.glow(
             focusedGlow = Glow(
