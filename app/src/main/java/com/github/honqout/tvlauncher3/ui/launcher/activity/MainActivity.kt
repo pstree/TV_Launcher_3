@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -142,6 +143,11 @@ class MainActivity : ComponentActivity() {
                 val selectedTabIndex by launcherViewModel.selectedTabIndex
                     .collectAsStateWithLifecycle()
                 val focusRequester = remember { FocusRequester() }
+                // 每个 tab 一个 FocusRequester:文件页在顶层按返回时要把焦点精确交回"文件"tab,
+                // 只请求整条 tab 栏会落到第一个 tab 上,并顺带把内容切回主页。
+                val tabFocusRequesters = remember(tabs.size) {
+                    List(tabs.size) { FocusRequester() }
+                }
 
                 LaunchedEffect(Unit) {
                     delay(100.milliseconds)
@@ -230,6 +236,9 @@ class MainActivity : ComponentActivity() {
                                                     launcherViewModel.setSelectedTabIndex(index)
                                                 }
                                             }
+                                            // 紧贴 combinedClickable 之前,FocusRequester 会绑定到它
+                                            // 创建的焦点节点上
+                                            .focusRequester(tabFocusRequesters[index])
                                             .combinedClickable(
                                                 interactionSource = interactionSource,
                                                 indication = null,
@@ -316,7 +325,16 @@ class MainActivity : ComponentActivity() {
                         when (selectedTabIndex.coerceIn(0, tabs.lastIndex)) {
                             0 -> HomeScreen(viewModel = launcherViewModel)
                             1 -> AppsScreen(viewModel = launcherViewModel)
-                            else -> FilesScreen(viewModel = filesViewModel)
+                            else -> FilesScreen(
+                                viewModel = filesViewModel,
+                                onBackAtTopLevel = {
+                                    // 焦点精确回到"文件"tab;请求失败也不影响返回键本身
+                                    runCatching {
+                                        tabFocusRequesters.getOrNull(selectedTabIndex)
+                                            ?.requestFocus()
+                                    }
+                                }
+                            )
                         }
                     }
 

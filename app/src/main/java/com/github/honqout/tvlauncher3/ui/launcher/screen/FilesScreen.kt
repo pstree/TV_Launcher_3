@@ -39,8 +39,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -63,11 +66,16 @@ import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_HORIZONTAL
 import com.github.honqout.tvlauncher3.ui.theme.SPACE_LIST_CONTENT_VERTICAL
 import com.github.honqout.tvlauncher3.utils.IntentUtils
 
+/** 目录内容是异步加载的,落焦点最多等这么多帧。 */
+private const val FOCUS_WAIT_FRAMES = 30
+
 @Composable
 fun FilesScreen(
-    viewModel: FilesViewModel = hiltViewModel()
+    viewModel: FilesViewModel = hiltViewModel(),
+    onBackAtTopLevel: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val itemFocusRequester = remember { FocusRequester() }
     val lazyGridState = rememberLazyGridState()
     val topBarHeight by viewModel.topBarHeight.collectAsStateWithLifecycle()
     val currentDir by viewModel.currentDir.collectAsStateWithLifecycle()
@@ -78,6 +86,10 @@ fun FilesScreen(
     // 待删除的文件/文件夹(按设置键弹出确认框);deleteFailed 用于提示删除失败
     var pendingDelete by remember { mutableStateOf<FilesViewModel.FileItem?>(null) }
     var deleteFailed by remember { mutableStateOf(false) }
+
+    // itemFocusRequester 挂在第 focusIndex 项上;pendingFocusPath 是返回上级后要落焦点的那个目录
+    var focusIndex by remember { mutableStateOf(0) }
+    var pendingFocusPath by remember { mutableStateOf<String?>(null) }
 
     // 菜单键操作面板:actionTarget 为当前焦点项,为 null 表示只提供粘贴(空目录/卷列表)
     var focusedItem by remember { mutableStateOf<FilesViewModel.FileItem?>(null) }
@@ -101,14 +113,42 @@ fun FilesScreen(
         viewModel.refresh()
     }
 
-    // 换目录后列表整批替换,旧焦点项已经不属于当前目录,必须丢弃
+    // 换目录后的落焦点规则:
+    //  · 进入目录 -> 焦点在第一项
+    //  · 按返回 -> 焦点回到刚退出的那个目录项(含从卷返回顶层时的"内置存储"这一项)
+    //  · 首次进入文件页的顶层(卷列表) -> 不抢焦点,焦点留在 tab 上
     LaunchedEffect(currentDir) {
         focusedItem = null
+        val targetPath = pendingFocusPath
+        pendingFocusPath = null
+        if (currentDir == null && targetPath == null) {
+            return@LaunchedEffect
+        }
+        repeat(FOCUS_WAIT_FRAMES) {
+            // 等目录内容加载完并参与布局,否则 scrollToItem/requestFocus 都会失效
+            withFrameNanos { }
+            if (items.isNotEmpty()) {
+                val targetIndex = items.indexOfFirst { it.path == targetPath }
+                    .takeIf { it >= 0 } ?: 0
+                // 先把目标项滚进可视区(懒加载列表不会组合屏幕外的项),再让它挂上 requester
+                lazyGridState.scrollToItem(targetIndex)
+                focusIndex = targetIndex
+                withFrameNanos { }
+                withFrameNanos { }
+                runCatching { itemFocusRequester.requestFocus() }
+                return@LaunchedEffect
+            }
+        }
     }
 
     BackHandler {
         if (currentDir != null) {
+            // 返回上级:焦点回到刚退出的这个目录
+            pendingFocusPath = currentDir?.absolutePath
             viewModel.goUp()
+        } else {
+            // 已经在顶层(卷列表):把焦点交回上面的"文件"tab
+            onBackAtTopLevel()
         }
     }
 
@@ -171,8 +211,14 @@ fun FilesScreen(
                 itemsIndexed(
                     items = items,
                     key = { _, item -> item.path }
-                ) { _, item ->
+                ) { index, item ->
                     FileItemButton(
+                        // 只有需要落焦点的那一项挂 FocusRequester
+                        modifier = if (index == focusIndex) {
+                            Modifier.focusRequester(itemFocusRequester)
+                        } else {
+                            Modifier
+                        },
                         item = item,
                         onShortClick = {
                             viewModel.onItemClick(item)
@@ -335,6 +381,7 @@ fun FilesScreen(
 
 @Composable
 private fun FileItemButton(
+    modifier: Modifier = Modifier,
     item: FilesViewModel.FileItem,
     onShortClick: () -> Unit,
     onFocused: () -> Unit
@@ -347,7 +394,7 @@ private fun FileItemButton(
 
     Button(
         onClick = onShortClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             // 记录焦点位置,菜单键的操作对象就是它
             .onFocusChanged { focusState ->

@@ -51,6 +51,12 @@ class FilesViewModel @Inject constructor(application: Application) :
     private val _items = MutableStateFlow<List<FileItem>>(emptyList())
     val items: StateFlow<List<FileItem>> = _items.asStateFlow()
 
+    /**
+     * 各个卷(内置存储、U 盘)的根路径。卷列表就是文件页的顶层,
+     * 返回键不允许越过卷根上到 /storage 甚至 /。
+     */
+    private val _volumeRoots = MutableStateFlow<List<String>>(emptyList())
+
     private val _showPermissionDialog = MutableStateFlow(false)
     val showPermissionDialog: StateFlow<Boolean> = _showPermissionDialog.asStateFlow()
 
@@ -235,8 +241,13 @@ class FilesViewModel @Inject constructor(application: Application) :
     }
 
     fun goUp() {
-        val parent = _currentDir.value?.parentFile
-        if (parent != null) {
+        val currentDir = _currentDir.value ?: return
+        val parent = currentDir.parentFile
+        val parentPath = parent?.absolutePath
+        // 只有在卷内部才逐级向上;已经到卷根(或更上层,例如 /storage、/)时回到卷列表
+        val staysInsideVolume = parentPath != null && parent != null &&
+            _volumeRoots.value.any { root -> isSameOrChild(parentPath, root) }
+        if (staysInsideVolume) {
             _currentDir.update { parent }
         } else {
             _currentDir.update { null }
@@ -292,6 +303,7 @@ class FilesViewModel @Inject constructor(application: Application) :
             }.onFailure {
                 Log.e(TAG, "Failed to load storage volumes.", it)
             }
+            _volumeRoots.value = volumeList.map { it.path }
             _items.value = volumeList
         }
     }
