@@ -37,6 +37,8 @@ fun AppActionButtonTv(
     @StringRes labelRes: Int,
     @StringRes contentDescriptionRes: Int = labelRes,
     enabled: Boolean = true,
+    contentColor: Color = Color.White,
+    focusedContentColor: Color = Color.Black,
     onShortClick: () -> Unit = {}
 ) {
     Button(
@@ -65,11 +67,11 @@ fun AppActionButtonTv(
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(16.dp)),
         colors = ButtonDefaults.colors(
             containerColor = Color.DarkGray,
-            contentColor = Color.White,
+            contentColor = contentColor,
             focusedContainerColor = Color.Gray,
-            focusedContentColor = Color.Black,
+            focusedContentColor = focusedContentColor,
             pressedContainerColor = Color.Gray,
-            pressedContentColor = Color.Black
+            pressedContentColor = focusedContentColor
         ),
         tonalElevation = 12.dp,
         border = ButtonDefaults.border(),
@@ -88,6 +90,9 @@ fun AppActionButtonTv(
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = stringResource(contentDescriptionRes),
+                // The leading icon follows the label colour so an active action (e.g. auto start)
+                // is highlighted as a whole.
+                tint = contentColor,
                 modifier = Modifier
                     .size(40.dp)
                     .graphicsLayer { cameraDistance = 12f }

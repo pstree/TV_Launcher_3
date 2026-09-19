@@ -63,6 +63,8 @@ fun AppsScreen(
     val activityModelList by viewModel.activityModelList.collectAsStateWithLifecycle()
     val focusedItemIndex by viewModel.focusedActivityItemIndex.collectAsStateWithLifecycle()
     val activityModel: ActivityModel? by viewModel.selectedActivityModel.collectAsStateWithLifecycle()
+    val autoStartPackageName by viewModel.autoStartPackageName.collectAsStateWithLifecycle()
+    val autoStartActivityName by viewModel.autoStartActivityName.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.ensureActivityModelListLoaded()
@@ -146,6 +148,11 @@ fun AppsScreen(
             if (selectedModel != null) {
                 AppActionDialog(
                     item = selectedModel,
+                    isAutoStart = autoStartPackageName == selectedModel.packageName &&
+                            autoStartActivityName == selectedModel.activityName,
+                    onToggleAutoStart = {
+                        viewModel.toggleAutoStartApp(selectedModel)
+                    },
                     onDismissRequest = {
                         viewModel.setShowAppActionScreen(false)
                     },

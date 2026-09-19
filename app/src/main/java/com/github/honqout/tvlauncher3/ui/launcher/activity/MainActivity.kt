@@ -176,6 +176,8 @@ class MainActivity : ComponentActivity() {
                     launcherViewModel.onConfigChanged(configuration)
                     // Request focus
                     focusRequester.requestFocus()
+                    // Launch the user-selected auto-start app once per boot.
+                    launcherViewModel.launchAutoStartAppIfNeeded()
                 }
 
                 Box(

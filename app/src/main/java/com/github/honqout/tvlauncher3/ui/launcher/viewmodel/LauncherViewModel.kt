@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -14,11 +15,14 @@ import androidx.lifecycle.viewModelScope
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.datastore.repository.IconRepository
+import com.github.honqout.tvlauncher3.datastore.repository.SettingsRepository
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils
 import com.github.honqout.tvlauncher3.utils.ApplicationUtils.Companion.LauncherActivityType
+import com.github.honqout.tvlauncher3.utils.IntentUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +38,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LauncherViewModel @Inject constructor(
     application: Application,
-    private val iconRepository: IconRepository
+    private val iconRepository: IconRepository,
+    private val settingsRepository: SettingsRepository
 ) : AndroidViewModel(application) {
     // constant
     val numColumns = IconRepository.NUM_FIXED_ACTIVITY
@@ -95,11 +100,21 @@ class LauncherViewModel @Inject constructor(
     private val _selectedActivityModel = MutableStateFlow<ActivityModel?>(null)
     val selectedActivityModel: StateFlow<ActivityModel?> = _selectedActivityModel.asStateFlow()
 
+    // The application selected for auto-start, empty when the feature is off.
+    private val _autoStartPackageName = MutableStateFlow("")
+    val autoStartPackageName: StateFlow<String> = _autoStartPackageName.asStateFlow()
+    private val _autoStartActivityName = MutableStateFlow("")
+    val autoStartActivityName: StateFlow<String> = _autoStartActivityName.asStateFlow()
+
     // broadcast receiver
     private var packageBroadcastReceiver: BroadcastReceiver? = null
 
     companion object {
         const val TAG: String = "LauncherViewModel"
+
+        // Delay before the auto-start app is launched, so the launcher has time to draw its first
+        // frame before another activity takes over the screen.
+        private const val AUTO_START_LAUNCH_DELAY_MS = 1500L
 
         enum class IconListOp {
             REMOVE_AFTER_UNINSTALL, REMOVE_AFTER_UPDATE
@@ -110,6 +125,9 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    // The BOOT_COUNT that was last handled, so the auto-start app is launched only once per boot.
+    private var lastHandledBootId = -2L
+
     // Enumerating every installed launcher activity costs a PackageManager query per app, so it is
     // deferred until the Apps tab (or the app picker) is actually shown instead of running on the
     // cold start path.
@@ -119,6 +137,7 @@ class LauncherViewModel @Inject constructor(
     init {
         registerPackageBR()
         initializeIcons()
+        observeAutoStartApp()
     }
 
     /**
@@ -225,6 +244,111 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Keep the in-memory auto-start selection in sync with the persisted one.
+     */
+    private fun observeAutoStartApp() {
+        viewModelScope.launch {
+            settingsRepository.settingsFlow.collect { settings ->
+                _autoStartPackageName.value = settings.autoStartPackageName
+                _autoStartActivityName.value = settings.autoStartActivityName
+            }
+        }
+    }
+
+    /**
+     * Turn auto-start on for [item] when it is currently off, and off again when [item] is already
+     * the selected app.
+     */
+    fun toggleAutoStartApp(item: ActivityModel) {
+        viewModelScope.launch {
+            try {
+                if (isAutoStartApp(item)) {
+                    settingsRepository.setAutoStartApp("", "")
+                } else {
+                    settingsRepository.setAutoStartApp(item.packageName, item.activityName)
+                    // Mark the current boot as handled, so enabling the feature only takes effect
+                    // from the next boot onwards instead of launching the app right away.
+                    val bootId = readBootCount()
+                    if (bootId >= 0) {
+                        settingsRepository.setLastAutoStartBootId(bootId)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update the auto-start app.", e)
+            }
+        }
+    }
+
+    /**
+     * Whether [item] is the app currently selected for auto-start.
+     */
+    fun isAutoStartApp(item: ActivityModel): Boolean {
+        return _autoStartPackageName.value == item.packageName &&
+                _autoStartActivityName.value == item.activityName
+    }
+
+    /**
+     * Launch the user-selected app once per boot.
+     *
+     * The launcher is a HOME app, so it is already brought up by the system at boot; waiting for a
+     * BOOT_COMPLETED broadcast here would race with that and is unnecessary. [Settings.Global.BOOT_COUNT]
+     * is used to make sure the app is only started on the first launch of a boot (a HOME app is
+     * recreated whenever the user returns to the home screen or after a configuration change), and
+     * it is persisted so a recreated ViewModel does not launch it again.
+     */
+    fun launchAutoStartAppIfNeeded() {
+        viewModelScope.launch {
+            try {
+                val autoStartApp = settingsRepository.getAutoStartApp()
+                if (autoStartApp == null) {
+                    return@launch
+                }
+                val bootId = readBootCount()
+                val alreadyHandled = if (bootId >= 0) {
+                    settingsRepository.getLastAutoStartBootId() == bootId
+                } else {
+                    // BOOT_COUNT unavailable (pre-API 24): fall back to the in-memory guard, which
+                    // at least covers recompositions within the same ViewModel.
+                    lastHandledBootId == bootId
+                }
+                if (alreadyHandled) {
+                    return@launch
+                }
+                lastHandledBootId = bootId
+                if (bootId >= 0) {
+                    settingsRepository.setLastAutoStartBootId(bootId)
+                }
+                // Give the system a moment to settle before stealing focus from the launcher.
+                delay(AUTO_START_LAUNCH_DELAY_MS)
+                val (packageName, activityName) = autoStartApp
+                IntentUtils.handleLaunchActivityResult(
+                    getApplication(),
+                    IntentUtils.launchActivity(
+                        getApplication(),
+                        packageName,
+                        activityName,
+                        true
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to launch the auto-start app.", e)
+            }
+        }
+    }
+
+    private fun readBootCount(): Long {
+        return try {
+            Settings.Global.getLong(
+                getApplication<Application>().contentResolver,
+                Settings.Global.BOOT_COUNT
+            )
+        } catch (e: Settings.SettingNotFoundException) {
+            Log.w(TAG, "Cannot read BOOT_COUNT, falling back to the in-memory guard.")
+            -1L
+        }
+    }
+
     fun setIcon(position: Int?, item: ActivityModel?) {
         val targetPosition = position ?: focusedFixedIconIndex
         if (targetPosition !in 0..<IconRepository.NUM_FIXED_ACTIVITY) {
@@ -317,14 +441,26 @@ class LauncherViewModel @Inject constructor(
             // Update fixed activities
             if (op == AppListOp.REMOVE) {
                 packageName?.let {
-                    updateFixedIconList(IconListOp.REMOVE_AFTER_UNINSTALL, packageName)
+                    updateFixedIconList(IconListOp.REMOVE_AFTER_UNINSTALL, it)
+                    clearAutoStartIfRemoved(it)
                 }
             }
             if (op == AppListOp.REPLACE) {
                 packageName?.let {
-                    updateFixedIconList(IconListOp.REMOVE_AFTER_UPDATE, packageName)
+                    updateFixedIconList(IconListOp.REMOVE_AFTER_UPDATE, it)
                 }
             }
+        }
+    }
+
+    /**
+     * Drop the auto-start selection when its package has been uninstalled. An update keeps the
+     * selection, since the launcher activity name is normally left untouched.
+     */
+    private suspend fun clearAutoStartIfRemoved(packageName: String) {
+        val selected = settingsRepository.getAutoStartApp() ?: return
+        if (selected.first == packageName) {
+            settingsRepository.setAutoStartApp("", "")
         }
     }
 

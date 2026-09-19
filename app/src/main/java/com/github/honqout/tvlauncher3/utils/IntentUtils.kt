@@ -268,29 +268,5 @@ class IntentUtils {
             }
             return launchApplicationDetailsSettings(context, packageName)
         }
-
-        fun openAppInMarket(context: Context, packageName: String): LaunchIntentResult {
-            if (packageName.isEmpty()) {
-                Log.e(
-                    TAG,
-                    "Cannot open detail page of this app in app market because the given packageName is null or empty."
-                )
-                return LaunchIntentResult.URI_IS_EMPTY
-            }
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setData(("market://details?id=$packageName").toUri())
-            }
-            try {
-                context.startActivity(intent)
-                return LaunchIntentResult.SUCCESS
-            } catch (e: ActivityNotFoundException) {
-                Log.e(
-                    TAG,
-                    "Cannot open detail page of this app in app market because no activity can open this uri.",
-                    e
-                )
-                return LaunchIntentResult.NO_MATCHING_ACTIVITY
-            }
-        }
     }
 }

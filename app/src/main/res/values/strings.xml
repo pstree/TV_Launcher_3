@@ -18,7 +18,7 @@
     <string name="run">Run</string>
     <string name="uninstall">Uninstall</string>
     <string name="info">Info</string>
-    <string name="app_market">App market</string>
+    <string name="auto_start">Auto start</string>
 
     <!-- TV -->
     <string name="signal_source">Signal source</string>

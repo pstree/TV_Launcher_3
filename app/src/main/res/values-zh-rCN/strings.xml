@@ -19,7 +19,7 @@
     <string name="run">运行</string>
     <string name="uninstall">卸载</string>
     <string name="info">信息</string>
-    <string name="app_market">应用市场</string>
+    <string name="auto_start">开机自启</string>
 
     <!-- TV -->
     <string name="signal_source">信号源</string>

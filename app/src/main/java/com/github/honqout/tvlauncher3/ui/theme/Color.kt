@@ -23,3 +23,5 @@ val TabContainerColorInactive = Color.White.copy(alpha = 0.3f)
 val TabContentColorActive = Color.Black
 val TabContentColorHovered = Color.Black.copy(alpha = 0.5f)
 val TabContentColorInactive = Color.White
+// Highlight for an action that is currently enabled, e.g. auto start in the app action dialog.
+val ActionActiveColor = Color(0xFFFF3B30)

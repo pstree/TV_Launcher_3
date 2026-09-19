@@ -41,6 +41,7 @@ import coil3.request.fallback
 import coil3.request.placeholder
 import coil3.size.Precision
 import com.github.honqout.tvlauncher3.R
+import com.github.honqout.tvlauncher3.ui.theme.ActionActiveColor
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_HEADLINE
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_LARGE
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_SMALL
@@ -55,6 +56,8 @@ import com.github.honqout.tvlauncher3.components.button.AppActionButtonTv
 @Composable
 fun AppActionDialog(
     item: ActivityModel,
+    isAutoStart: Boolean = false,
+    onToggleAutoStart: () -> Unit = {},
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -267,16 +270,16 @@ fun AppActionDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                // Auto start: red while the app is selected for auto-start, plain otherwise. Pressing
+                // OK toggles the selection, so the colour reflects whether it is currently on.
                 AppActionButtonTv(
                     modifier = Modifier,
-                    iconRes = R.drawable.baseline_store_24,
-                    labelRes = R.string.app_market,
+                    iconRes = R.drawable.baseline_power_settings_new_24,
+                    labelRes = R.string.auto_start,
+                    contentColor = if (isAutoStart) ActionActiveColor else Color.White,
+                    focusedContentColor = if (isAutoStart) ActionActiveColor else Color.Black,
                     onShortClick = {
-                        IntentUtils.handleLaunchIntentResult(
-                            context,
-                            IntentUtils.openAppInMarket(context, item.packageName),
-                            { onDismissRequest() }
-                        )
+                        onToggleAutoStart()
                     },
                 )
             }
