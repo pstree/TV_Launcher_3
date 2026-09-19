@@ -5,6 +5,7 @@
     <string name="home">Home</string>
     <string name="apps">Apps</string>
     <string name="files">Files</string>
+    <string name="wallpaper">Wallpaper</string>
     <string name="settings">Settings</string>
 
     <!-- Shortcut operation -->
@@ -50,6 +51,16 @@
     <string name="paste_failed">Paste failed.</string>
     <string name="install_permission_required">Allow this app to install unknown apps, then try again.</string>
     <string name="install_failed">Cannot start the installer.</string>
+
+    <!-- Wallpaper -->
+    <string name="wallpaper_loading">Loading wallpapers…</string>
+    <string name="wallpaper_load_failed">Cannot load wallpapers. Check the network and retry.</string>
+    <string name="retry">Retry</string>
+    <string name="wallpaper_hint">Press the OK key to set the focused image as wallpaper.</string>
+    <string name="wallpaper_applying">Setting wallpaper…</string>
+    <string name="wallpaper_applied">Wallpaper set. Saved to Pictures/Wallpapers.</string>
+    <string name="wallpaper_save_failed">Failed to save the wallpaper.</string>
+    <string name="wallpaper_permission_required">Storage permission is required to save the wallpaper.</string>
 
     <!-- Hint -->
     <string name="activity_belongs_to">\"%s\" belongs to the following app:</string>

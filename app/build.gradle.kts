@@ -92,6 +92,8 @@ dependencies {
     implementation(libs.androidx.tv.foundation)
     implementation(libs.androidx.tv.material)
     implementation(libs.coil.compose)
+    // 壁纸页要从网络加载缩略图,Coil 3 需要显式引入一个网络 fetcher
+    implementation(libs.coil.network.okhttp)
     implementation(libs.drawablepainter)
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)

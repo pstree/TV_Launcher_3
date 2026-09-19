@@ -41,6 +41,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,6 +54,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -75,8 +78,10 @@ import com.github.honqout.tvlauncher3.constants.NumberConstants
 import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.FilesScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
+import com.github.honqout.tvlauncher3.ui.launcher.screen.WallpaperScreen
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.WallpaperViewModel
 import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_MEDIUM
 import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
 import com.github.honqout.tvlauncher3.ui.theme.TVLauncher3Theme
@@ -87,6 +92,7 @@ import com.github.honqout.tvlauncher3.ui.theme.TabContentColorHovered
 import com.github.honqout.tvlauncher3.ui.theme.TabContentColorInactive
 import com.github.honqout.tvlauncher3.utils.DisplayUtils
 import com.github.honqout.tvlauncher3.utils.UIUtils
+import com.github.honqout.tvlauncher3.utils.WallpaperUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -101,6 +107,7 @@ class MainActivity : ComponentActivity() {
 
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val filesViewModel: FilesViewModel by viewModels()
+    private val wallpaperViewModel: WallpaperViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,6 +155,20 @@ class MainActivity : ComponentActivity() {
                 val tabFocusRequesters = remember(tabs.size) {
                     List(tabs.size) { FocusRequester() }
                 }
+                var topBarHeight by remember { mutableIntStateOf(0) }
+
+                // 用户选过壁纸就用它当背景,没选过(或解码失败)回退到内置壁纸
+                val backgroundVersion by wallpaperViewModel.backgroundVersion
+                    .collectAsStateWithLifecycle()
+                var backgroundBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+                LaunchedEffect(backgroundVersion) {
+                    val metrics = resources.displayMetrics
+                    backgroundBitmap = WallpaperUtils.loadLauncherBackground(
+                        this@MainActivity,
+                        metrics.widthPixels,
+                        metrics.heightPixels
+                    )?.asImageBitmap()
+                }
 
                 LaunchedEffect(Unit) {
                     delay(100.milliseconds)
@@ -163,13 +184,22 @@ class MainActivity : ComponentActivity() {
                         .windowInsetsPadding(WindowInsets.systemBars)
                         .background(Color.Transparent)
                 ) {
-                    // 固定使用内置默认壁纸
-                    Image(
-                        painter = painterResource(R.drawable.wallpaper_bg),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.matchParentSize()
-                    )
+                    val background = backgroundBitmap
+                    if (background != null) {
+                        Image(
+                            bitmap = background,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.wallpaper_bg),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    }
 
                     Row(
                         modifier = Modifier
@@ -178,6 +208,7 @@ class MainActivity : ComponentActivity() {
                             .padding(20.dp)
                             .onSizeChanged { intSize ->
                                 val heightDp = DisplayUtils.pixelToDp(baseContext, intSize.height)
+                                topBarHeight = heightDp
                                 launcherViewModel.setTopBarHeight(heightDp)
                                 filesViewModel.setTopBarHeight(heightDp)
                             },
@@ -325,7 +356,7 @@ class MainActivity : ComponentActivity() {
                         when (selectedTabIndex.coerceIn(0, tabs.lastIndex)) {
                             0 -> HomeScreen(viewModel = launcherViewModel)
                             1 -> AppsScreen(viewModel = launcherViewModel)
-                            else -> FilesScreen(
+                            2 -> FilesScreen(
                                 viewModel = filesViewModel,
                                 onBackAtTopLevel = {
                                     // 焦点精确回到"文件"tab;请求失败也不影响返回键本身
@@ -334,6 +365,11 @@ class MainActivity : ComponentActivity() {
                                             ?.requestFocus()
                                     }
                                 }
+                            )
+
+                            else -> WallpaperScreen(
+                                viewModel = wallpaperViewModel,
+                                topBarHeight = topBarHeight
                             )
                         }
                     }

@@ -6,6 +6,7 @@
     <string name="home">主页</string>
     <string name="apps">应用</string>
     <string name="files">文件</string>
+    <string name="wallpaper">壁纸</string>
     <string name="settings">设置</string>
 
     <!-- Shortcut operation -->
@@ -51,6 +52,16 @@
     <string name="paste_failed">粘贴失败。</string>
     <string name="install_permission_required">请先允许本应用安装未知来源的应用,然后重试。</string>
     <string name="install_failed">无法启动安装程序。</string>
+
+    <!-- Wallpaper -->
+    <string name="wallpaper_loading">正在加载壁纸…</string>
+    <string name="wallpaper_load_failed">壁纸加载失败,请检查网络后重试。</string>
+    <string name="retry">重试</string>
+    <string name="wallpaper_hint">按确认键把选中的图片设为壁纸</string>
+    <string name="wallpaper_applying">正在设置壁纸…</string>
+    <string name="wallpaper_applied">已设为壁纸,并保存到 Pictures/Wallpapers</string>
+    <string name="wallpaper_save_failed">保存壁纸失败。</string>
+    <string name="wallpaper_permission_required">保存壁纸需要存储权限。</string>
 
     <!-- Hint -->
     <string name="activity_belongs_to">“%s”属于以下应用：</string>

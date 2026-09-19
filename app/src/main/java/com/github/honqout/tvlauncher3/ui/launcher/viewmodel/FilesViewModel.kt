@@ -243,10 +243,9 @@ class FilesViewModel @Inject constructor(application: Application) :
     fun goUp() {
         val currentDir = _currentDir.value ?: return
         val parent = currentDir.parentFile
-        val parentPath = parent?.absolutePath
         // 只有在卷内部才逐级向上;已经到卷根(或更上层,例如 /storage、/)时回到卷列表
-        val staysInsideVolume = parentPath != null && parent != null &&
-            _volumeRoots.value.any { root -> isSameOrChild(parentPath, root) }
+        val staysInsideVolume = parent != null &&
+            _volumeRoots.value.any { root -> isSameOrChild(parent.absolutePath, root) }
         if (staysInsideVolume) {
             _currentDir.update { parent }
         } else {
