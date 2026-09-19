@@ -224,6 +224,12 @@ class MainActivity : ComponentActivity() {
                                         },
                                         modifier = Modifier
                                             .background(color = bgColor, shape = CircleShape)
+                                            // 遥控器 DPAD 移动到该 tab 即切换内容,无需再按 OK (增强)
+                                            .onFocusChanged { focusState ->
+                                                if (focusState.isFocused) {
+                                                    launcherViewModel.setSelectedTabIndex(index)
+                                                }
+                                            }
                                             .combinedClickable(
                                                 interactionSource = interactionSource,
                                                 indication = null,
