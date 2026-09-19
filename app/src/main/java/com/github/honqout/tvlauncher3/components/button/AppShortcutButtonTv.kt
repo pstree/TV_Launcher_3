@@ -5,7 +5,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+// 下拉菜单是 mobile material3 组件,里面必须用同一套 material3 的 Text/Icon:
+// tv 版的 Text/Icon 读的是 tv-material3 自己的 LocalContentColor,在 mobile 菜单里没人提供,
+// 会退回默认的黑色 —— 深色主题下就成了黑底黑字。
+import androidx.compose.material3.Icon as Material3Icon
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.Text as Material3Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -23,8 +28,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.tv.material3.Icon
-import androidx.tv.material3.Text
 import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.ui.theme.ButtonContentDefault
@@ -95,7 +98,7 @@ fun AppShortcutButtonTv(
         ) {
             DropdownMenuItem(
                 text = {
-                    Text(text = stringResource(R.string.remove))
+                    Material3Text(text = stringResource(R.string.remove))
                 },
                 onClick = {
                     onRemoveItem()
@@ -103,7 +106,7 @@ fun AppShortcutButtonTv(
                 },
                 modifier = Modifier,
                 leadingIcon = {
-                    Icon(
+                    Material3Icon(
                         painter = painterResource(R.drawable.baseline_delete_24),
                         contentDescription = stringResource(R.string.remove),
                         modifier = Modifier
@@ -115,14 +118,14 @@ fun AppShortcutButtonTv(
 
             DropdownMenuItem(
                 text = {
-                    Text(text = stringResource(R.string.replace))
+                    Material3Text(text = stringResource(R.string.replace))
                 },
                 onClick = {
                     onReplaceItem()
                     expanded = false
                 },
                 leadingIcon = {
-                    Icon(
+                    Material3Icon(
                         painter = painterResource(R.drawable.baseline_edit_24),
                         contentDescription = stringResource(R.string.replace),
                         modifier = Modifier
