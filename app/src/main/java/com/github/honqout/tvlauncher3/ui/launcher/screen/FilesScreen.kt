@@ -24,9 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -76,12 +76,30 @@ fun FilesScreen(
 ) {
     val context = LocalContext.current
     val itemFocusRequester = remember { FocusRequester() }
-    val lazyGridState = rememberLazyGridState()
     val topBarHeight by viewModel.topBarHeight.collectAsStateWithLifecycle()
     val currentDir by viewModel.currentDir.collectAsStateWithLifecycle()
     val items by viewModel.items.collectAsStateWithLifecycle()
     val showPermissionDialog by viewModel.showPermissionDialog.collectAsStateWithLifecycle()
     val clipboard by viewModel.clipboard.collectAsStateWithLifecycle()
+
+    // 每个目录各记一份滚动位置,返回/再次进入时原地恢复:列表不用先滚再落焦点,也就不会"动一下"
+    val savedScrollPositions = remember { mutableMapOf<String, Pair<Int, Int>>() }
+    val gridKey = currentDir?.absolutePath.orEmpty()
+    val lazyGridState = remember(gridKey) {
+        val saved = savedScrollPositions[gridKey]
+        if (saved == null) {
+            LazyGridState()
+        } else {
+            LazyGridState(
+                firstVisibleItemIndex = saved.first,
+                firstVisibleItemScrollOffset = saved.second
+            )
+        }
+    }
+    val saveScrollPosition = {
+        savedScrollPositions[gridKey] =
+            lazyGridState.firstVisibleItemIndex to lazyGridState.firstVisibleItemScrollOffset
+    }
 
     // 待删除的文件/文件夹(按设置键弹出确认框);deleteFailed 用于提示删除失败
     var pendingDelete by remember { mutableStateOf<FilesViewModel.FileItem?>(null) }
@@ -124,14 +142,20 @@ fun FilesScreen(
         if (currentDir == null && targetPath == null) {
             return@LaunchedEffect
         }
+        val dirPath = currentDir?.absolutePath
         repeat(FOCUS_WAIT_FRAMES) {
-            // 等目录内容加载完并参与布局,否则 scrollToItem/requestFocus 都会失效
             withFrameNanos { }
-            if (items.isNotEmpty()) {
+            // 等的是"当前目录的内容",items 里可能还留着上一层的列表
+            val contentReady = items.isNotEmpty() &&
+                if (dirPath == null) items.first().isVolume
+                else items.first().path.startsWith("$dirPath/")
+            if (contentReady) {
                 val targetIndex = items.indexOfFirst { it.path == targetPath }
                     .takeIf { it >= 0 } ?: 0
-                // 先把目标项滚进可视区(懒加载列表不会组合屏幕外的项),再让它挂上 requester
-                lazyGridState.scrollToItem(targetIndex)
+                // 恢复出来的位置看不到目标项时才滚(懒加载列表不会组合屏幕外的项,requester 挂不上)
+                if (lazyGridState.layoutInfo.visibleItemsInfo.none { it.index == targetIndex }) {
+                    lazyGridState.scrollToItem(targetIndex)
+                }
                 focusIndex = targetIndex
                 withFrameNanos { }
                 withFrameNanos { }
@@ -144,6 +168,7 @@ fun FilesScreen(
     BackHandler {
         if (currentDir != null) {
             // 返回上级:焦点回到刚退出的这个目录
+            saveScrollPosition()
             pendingFocusPath = currentDir?.absolutePath
             viewModel.goUp()
         } else {
@@ -221,6 +246,10 @@ fun FilesScreen(
                         },
                         item = item,
                         onShortClick = {
+                            // 进目录前先记下当前位置,返回时原地恢复
+                            if (item.isDirectory) {
+                                saveScrollPosition()
+                            }
                             viewModel.onItemClick(item)
                         },
                         onFocused = {
