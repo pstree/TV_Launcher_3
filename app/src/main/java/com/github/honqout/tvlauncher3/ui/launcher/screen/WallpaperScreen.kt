@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +76,11 @@ fun WallpaperScreen(
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     val loadFailed by viewModel.loadFailed.collectAsStateWithLifecycle()
     val applying by viewModel.applying.collectAsStateWithLifecycle()
+
+    // 必应每天换图,而启动器常驻不重启:每次进入本页时按新鲜度决定要不要重拉
+    LaunchedEffect(Unit) {
+        viewModel.refreshIfStale()
+    }
 
     var pendingApply by remember { mutableStateOf<WallpaperItem?>(null) }
 
@@ -183,7 +189,8 @@ fun WallpaperScreen(
                     }
                 }
 
-                if (loading) {
+                // 后台刷新时不遮挡已经渲染好的旧图,只有首次加载(列表还空)才盖全屏
+                if (loading && items.isEmpty()) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -199,7 +206,8 @@ fun WallpaperScreen(
                     }
                 }
 
-                if (loadFailed && !loading) {
+                // 刷新失败时继续用旧图,只有手上确实没有内容才提示失败
+                if (loadFailed && !loading && items.isEmpty()) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
