@@ -1,7 +1,6 @@
 package com.github.honqout.tvlauncher3.ui.launcher.viewmodel
 
 import android.app.Application
-import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,6 +8,9 @@ import com.github.honqout.tvlauncher3.data.BingWallpaper
 import com.github.honqout.tvlauncher3.data.WallpaperItem
 import com.github.honqout.tvlauncher3.utils.WallpaperUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,15 +37,17 @@ class WallpaperViewModel @Inject constructor(application: Application) :
         private const val MAX_CHUNKS: Int = 4
         private const val TAG: String = "WallpaperViewModel"
 
-        /**
-         * 数据新鲜度上限。必应每天换图,而启动器是常驻进程,不会随换图重建 ViewModel,
-         * 所以进入壁纸页时要自己判断这份列表放旧了没有。6 小时最多重拉 4 次,代价可忽略。
-         */
-        private const val REFRESH_INTERVAL_MS: Long = 6 * 60 * 60 * 1000L
+        /** 本地日期格式,和接口返回的 startdate 一致。 */
+        private const val DATE_PATTERN: String = "yyyyMMdd"
     }
 
-    /** 上次成功拉取的时刻(uptime);0 表示还没成功过。 */
-    private var lastLoadedAtMs: Long = 0L
+    /**
+     * 上次成功拉取时的本地日期(yyyyMMdd),空表示还没成功过。
+     *
+     * 必应每天只换一张图,而启动器是常驻进程、不会随换图重建 ViewModel,
+     * 所以用"日期"而不是时长来卡:同一天内反复进出壁纸页都不再请求。
+     */
+    private var lastLoadedDate: String = ""
 
     private val _items = MutableStateFlow<List<WallpaperItem>>(emptyList())
     val items: StateFlow<List<WallpaperItem>> = _items.asStateFlow()
@@ -66,16 +70,18 @@ class WallpaperViewModel @Inject constructor(application: Application) :
     }
 
     /**
-     * 进入壁纸页时调用。列表还新鲜就什么都不做,过期(或从未成功加载过)才重新拉取,
-     * 这样必应换了图也能在下一次进入时体现出来,而不用等进程重启。
+     * 进入壁纸页时调用。当天已经成功拉过就不再请求,跨天(或还没成功过)才重新拉取,
+     * 这样必应换了图当天就能体现出来,而不用等进程重启。每天至多请求一次。
      */
     fun refreshIfStale() {
-        val age = SystemClock.elapsedRealtime() - lastLoadedAtMs
-        if (lastLoadedAtMs != 0L && age < REFRESH_INTERVAL_MS) {
+        if (lastLoadedDate == today()) {
             return
         }
         load()
     }
+
+    private fun today(): String =
+        SimpleDateFormat(DATE_PATTERN, Locale.US).format(Date())
 
     /**
      * 拉取一页壁纸。接口每块只给 8 张,所以按游标连续取,凑够 12 张就停。
@@ -92,7 +98,7 @@ class WallpaperViewModel @Inject constructor(application: Application) :
                 _loadFailed.value = true
             } else {
                 _items.value = fetched.take(ITEM_COUNT)
-                lastLoadedAtMs = SystemClock.elapsedRealtime()
+                lastLoadedDate = today()
             }
             _loading.value = false
         }
