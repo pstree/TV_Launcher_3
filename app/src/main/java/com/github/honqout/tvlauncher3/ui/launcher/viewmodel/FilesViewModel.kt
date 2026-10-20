@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.storage.StorageManager
@@ -452,20 +453,7 @@ class FilesViewModel @Inject constructor(application: Application) :
      */
     private fun installApk(file: File) {
         val context = getApplication<Application>()
-        val started = runCatching {
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, APK_MIME_TYPE)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        }.onFailure {
-            Log.e(TAG, "Failed to install apk: ${file.absolutePath}", it)
-        }.isSuccess
+        val started = startInstaller(context, file)
         if (started) {
             return
         }
@@ -481,6 +469,48 @@ class FilesViewModel @Inject constructor(application: Application) :
         } else {
             Toast.makeText(context, R.string.install_failed, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * 依次尝试把安装器拉起来,返回是否成功打开了安装界面。
+     *
+     * 定制 TV 固件上的安装器不一定同时声明 content 与 file 两种 scheme:小米盒子(Android 6)的
+     * com.android.packageinstaller 只声明了 file 和 package,给它 content:// 的 FileProvider URI
+     * 只会得到 ActivityNotFoundException。所以两个 scheme 都备一份,起不来就换下一个。
+     */
+    private fun startInstaller(context: Context, file: File): Boolean =
+        installerIntents(context, file).any { intent ->
+            runCatching {
+                context.startActivity(intent)
+            }.onFailure {
+                Log.w(TAG, "Cannot start installer for ${intent.data}", it)
+            }.isSuccess
+        }
+
+    private fun installerIntents(context: Context, file: File): List<Intent> {
+        val intents = mutableListOf<Intent>()
+        runCatching {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        }.getOrNull()?.let { uri ->
+            intents.add(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, APK_MIME_TYPE)
+                    addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+            )
+        }
+        // API 24 起 file:// 出站会被 StrictMode 拦成 FileUriExposedException,只能老系统上兜底
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            intents.add(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(Uri.fromFile(file), APK_MIME_TYPE)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+        }
+        return intents
     }
 
     /** [path] 是否等于 [parent] 或位于其下(用于剪贴板失效判断)。 */
