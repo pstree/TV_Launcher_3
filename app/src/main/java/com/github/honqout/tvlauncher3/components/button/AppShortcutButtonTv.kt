@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -36,8 +37,11 @@ import com.github.honqout.tvlauncher3.ui.theme.ButtonContentFocused
 @Composable
 fun AppShortcutButtonTv(
     modifier: Modifier = Modifier,
+    focusRequester: FocusRequester = remember { FocusRequester() },
+    focusable: Boolean = true,
     activityModel: ActivityModel?,
     onFocused: () -> Unit = {},
+    onFocusChanged: (Boolean) -> Unit = {},
     onAddItem: () -> Unit = {},
     onStartApp: () -> Unit = {},
     onRemoveItem: () -> Unit = {},
@@ -64,6 +68,7 @@ fun AppShortcutButtonTv(
         ActivityButtonTv(
             modifier = Modifier
                 .onFocusChanged { focusState ->
+                    onFocusChanged(focusState.isFocused)
                     if (focusState.isFocused) {
                         onFocused()
                     }
@@ -71,6 +76,8 @@ fun AppShortcutButtonTv(
                 .onGloballyPositioned { coordinates ->
                     buttonWidth = coordinates.size.width
                 },
+            focusRequester = focusRequester,
+            focusable = focusable,
             activityModel = activityModel,
             defaultIcon = addIcon,
             contentDefaultColor = ButtonContentDefault,

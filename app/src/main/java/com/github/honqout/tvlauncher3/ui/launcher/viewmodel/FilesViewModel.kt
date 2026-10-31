@@ -43,9 +43,6 @@ class FilesViewModel @Inject constructor(application: Application) :
         val isVolume: Boolean = false
     )
 
-    private val _topBarHeight = MutableStateFlow<Int>(0)
-    val topBarHeight: StateFlow<Int> = _topBarHeight.asStateFlow()
-
     private val _currentDir = MutableStateFlow<File?>(null)
     val currentDir: StateFlow<File?> = _currentDir.asStateFlow()
 
@@ -140,10 +137,6 @@ class FilesViewModel @Inject constructor(application: Application) :
 
     fun setShowPermissionDialog(newValue: Boolean) {
         _showPermissionDialog.update { newValue }
-    }
-
-    fun setTopBarHeight(newValue: Int) {
-        _topBarHeight.update { newValue }
     }
 
     fun refresh() {

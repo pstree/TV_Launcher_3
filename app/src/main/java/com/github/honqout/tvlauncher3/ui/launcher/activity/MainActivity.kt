@@ -1,8 +1,6 @@
 package com.github.honqout.tvlauncher3.ui.launcher.activity
 
 import android.os.Bundle
-import android.util.Log
-import android.widget.TextClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -10,7 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,11 +16,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -35,68 +28,56 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Icon
-import androidx.tv.material3.Tab
-import androidx.tv.material3.TabDefaults
-import androidx.tv.material3.TabRow
-import androidx.tv.material3.TabRowDefaults
-import androidx.tv.material3.Text
 import com.github.honqout.tvlauncher3.R
+import com.github.honqout.tvlauncher3.components.HomeClock
 import com.github.honqout.tvlauncher3.components.button.IconButtonTv
 import com.github.honqout.tvlauncher3.components.dialog.SettingsDialog
-import com.github.honqout.tvlauncher3.constants.NumberConstants
-import com.github.honqout.tvlauncher3.ui.launcher.screen.AppsScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.FilesScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.HomeScreen
 import com.github.honqout.tvlauncher3.ui.launcher.screen.WallpaperScreen
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.FilesViewModel
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.LauncherViewModel.Companion.Overlay
 import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.WallpaperViewModel
-import com.github.honqout.tvlauncher3.ui.theme.FONT_SIZE_MEDIUM
-import com.github.honqout.tvlauncher3.ui.theme.OnWallpaperContainer
+import com.github.honqout.tvlauncher3.ui.launcher.viewmodel.WeatherViewModel
 import com.github.honqout.tvlauncher3.ui.theme.TVLauncher3Theme
-import com.github.honqout.tvlauncher3.ui.theme.TabContainerColorActive
-import com.github.honqout.tvlauncher3.ui.theme.TabContainerColorInactive
-import com.github.honqout.tvlauncher3.ui.theme.TabContentColorActive
-import com.github.honqout.tvlauncher3.ui.theme.TabContentColorHovered
-import com.github.honqout.tvlauncher3.ui.theme.TabContentColorInactive
 import com.github.honqout.tvlauncher3.utils.DisplayUtils
 import com.github.honqout.tvlauncher3.utils.UIUtils
 import com.github.honqout.tvlauncher3.utils.WallpaperUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+
+/** 顶部栏右侧的按钮:壁纸、文件、设置。下标用于关闭浮层后把焦点交回原按钮。 */
+private const val TOP_WALLPAPER = 0
+private const val TOP_FILES = 1
+private const val TOP_SETTINGS = 2
+private const val TOP_BUTTON_COUNT = 3
+
+/** 文件/壁纸浮层下的压暗层,盖住壁纸,保证整屏都是这一页。 */
+private val OVERLAY_SCRIM = Color.Black.copy(alpha = 0.78f)
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -108,6 +89,7 @@ class MainActivity : ComponentActivity() {
     private val launcherViewModel: LauncherViewModel by viewModels()
     private val filesViewModel: FilesViewModel by viewModels()
     private val wallpaperViewModel: WallpaperViewModel by viewModels()
+    private val weatherViewModel: WeatherViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -137,24 +119,26 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            // The home screen swallows Back so it can never leave the launcher.
-            BackHandler {
-            }
-
             TVLauncher3Theme {
                 val configuration = LocalConfiguration.current
 
-                val tabs = launcherViewModel.tabs
+                val overlay by launcherViewModel.overlay.collectAsStateWithLifecycle()
                 val showSettingsDialog by launcherViewModel.showSettingsDialog
                     .collectAsStateWithLifecycle()
-                val selectedTabIndex by launcherViewModel.selectedTabIndex
-                    .collectAsStateWithLifecycle()
-                val focusRequester = remember { FocusRequester() }
-                // 每个 tab 一个 FocusRequester:文件页在顶层按返回时要把焦点精确交回"文件"tab,
-                // 只请求整条 tab 栏会落到第一个 tab 上,并顺带把内容切回主页。
-                val tabFocusRequesters = remember(tabs.size) {
-                    List(tabs.size) { FocusRequester() }
+                // 左上角时钟:天气数据 + 面板展开时淡出的透明度。
+                val weather by weatherViewModel.weather.collectAsStateWithLifecycle()
+                val drawerOpen by launcherViewModel.drawerOpen.collectAsStateWithLifecycle()
+                val clockAlpha by animateFloatAsState(
+                    targetValue = if (drawerOpen) 0f else 1f,
+                    animationSpec = tween(durationMillis = 160),
+                    label = "home-clock-alpha"
+                )
+
+                val topBarRequesters = remember {
+                    List(TOP_BUTTON_COUNT) { FocusRequester() }
                 }
+                // 打开文件/壁纸/设置的那个按钮;关闭后焦点要回到它身上,否则会落到首页的快捷区。
+                var openerIndex by remember { mutableIntStateOf(-1) }
                 var topBarHeight by remember { mutableIntStateOf(0) }
 
                 // 用户选过壁纸就用它当背景,没选过(或解码失败)回退到内置壁纸
@@ -170,14 +154,42 @@ class MainActivity : ComponentActivity() {
                     )?.asImageBitmap()
                 }
 
+                // 浮层都关掉之后,焦点回到打开它的那个顶部按钮。
+                LaunchedEffect(overlay, showSettingsDialog) {
+                    if (overlay != Overlay.NONE || showSettingsDialog) {
+                        return@LaunchedEffect
+                    }
+                    val index = openerIndex
+                    if (index < 0) {
+                        return@LaunchedEffect
+                    }
+                    openerIndex = -1
+                    withFrameNanos { }
+                    runCatching { topBarRequesters[index].requestFocus() }
+                }
+
                 LaunchedEffect(Unit) {
                     delay(100.milliseconds)
                     // Handle config changes
                     launcherViewModel.onConfigChanged(configuration)
-                    // Request focus
-                    focusRequester.requestFocus()
                     // Launch the user-selected auto-start app once per boot.
                     launcherViewModel.launchAutoStartAppIfNeeded()
+                }
+
+                // 天气一小时更新一次就够了,这里半小时敲一次门,命中缓存时它就是空转。
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        weatherViewModel.refresh()
+                        delay(30.minutes)
+                    }
+                }
+
+                // The home screen swallows Back so it can never leave the launcher; an open overlay
+                // closes first (the Files browser registers its own handler for its subdirectories).
+                BackHandler {
+                    if (overlay != Overlay.NONE) {
+                        launcherViewModel.setOverlay(Overlay.NONE)
+                    }
                 }
 
                 Box(
@@ -212,167 +224,90 @@ class MainActivity : ComponentActivity() {
                                 val heightDp = DisplayUtils.pixelToDp(baseContext, intSize.height)
                                 topBarHeight = heightDp
                                 launcherViewModel.setTopBarHeight(heightDp)
-                                filesViewModel.setTopBarHeight(heightDp)
                             },
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TabRow(
-                            selectedTabIndex = selectedTabIndex,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(OnWallpaperContainer)
-                                .focusRestorer()
-                                .focusRequester(focusRequester),
-                            containerColor = Color.Transparent,
-                            contentColor = Color.White,
-                            indicator = { tabPositions, doesTabRowHaveFocus ->
-                                TabRowDefaults.PillIndicator(
-                                    currentTabPosition = tabPositions[selectedTabIndex],
-                                    doesTabRowHaveFocus = doesTabRowHaveFocus,
-                                    modifier = Modifier,
-                                    activeColor = TabContainerColorActive,
-                                    inactiveColor = TabContainerColorInactive
-                                )
+                        IconButtonTv(
+                            focusRequester = topBarRequesters[TOP_WALLPAPER],
+                            iconRes = R.drawable.baseline_wallpaper_24,
+                            contentDescriptionRes = R.string.wallpaper,
+                            onShortClick = {
+                                openerIndex = TOP_WALLPAPER
+                                launcherViewModel.setOverlay(Overlay.WALLPAPER)
                             }
-                        ) {
-                            tabs.forEachIndexed { index, tab ->
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val focusState = interactionSource.collectIsFocusedAsState()
-                                val hoverState = interactionSource.collectIsHoveredAsState()
-                                val bgColor by animateColorAsState(
-                                    targetValue = if (focusState.value || hoverState.value)
-                                        TabContainerColorActive
-                                    else Color.Transparent,
-                                    animationSpec = tween(durationMillis = NumberConstants.ANIM_DURATION_MS)
-                                )
-                                val contentColor by animateColorAsState(
-                                    targetValue = if (selectedTabIndex == index)
-                                        TabContentColorActive
-                                    else if (focusState.value || hoverState.value)
-                                        TabContentColorHovered
-                                    else TabContentColorInactive
-                                )
+                        )
 
-                                key(index) {
-                                    Tab(
-                                        selected = selectedTabIndex == index,
-                                        onFocus = {
-                                            // 遥控器 DPAD 移动到该 tab 即切换内容,无需再按 OK
-                                            launcherViewModel.setSelectedTabIndex(index)
-                                        },
-                                        modifier = Modifier
-                                            .background(color = bgColor, shape = CircleShape)
-                                            // 遥控器 DPAD 移动到该 tab 即切换内容,无需再按 OK (增强)
-                                            .onFocusChanged { focusState ->
-                                                if (focusState.isFocused) {
-                                                    launcherViewModel.setSelectedTabIndex(index)
-                                                }
-                                            }
-                                            // 紧贴 combinedClickable 之前,FocusRequester 会绑定到它
-                                            // 创建的焦点节点上
-                                            .focusRequester(tabFocusRequesters[index])
-                                            .combinedClickable(
-                                                interactionSource = interactionSource,
-                                                indication = null,
-                                                enabled = true,
-                                                role = Role.Tab,
-                                                onClick = {
-                                                    launcherViewModel.setSelectedTabIndex(index)
-                                                }
-                                            ),
-                                        onClick = {
-                                            launcherViewModel.setSelectedTabIndex(index)
-                                        },
-                                        colors = TabDefaults.pillIndicatorTabColors(
-                                            contentColor = Color.White.copy(alpha = 0.7f),
-                                            inactiveContentColor = Color.White.copy(alpha = 0.5f),
-                                            selectedContentColor = TabContentColorActive,
-                                            focusedContentColor = TabContentColorHovered,
-                                            focusedSelectedContentColor = TabContentColorActive,
-                                        )
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                painterResource(tab.first),
-                                                contentDescription = stringResource(tab.second),
-                                                tint = contentColor
-                                            )
-
-                                            Spacer(modifier = Modifier.width(10.dp))
-
-                                            Text(
-                                                text = stringResource(tab.second),
-                                                color = contentColor,
-                                                fontSize = FONT_SIZE_MEDIUM
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(12.dp))
 
                         IconButtonTv(
+                            focusRequester = topBarRequesters[TOP_FILES],
+                            iconRes = R.drawable.baseline_folder_24,
+                            contentDescriptionRes = R.string.files,
+                            onShortClick = {
+                                openerIndex = TOP_FILES
+                                launcherViewModel.setOverlay(Overlay.FILES)
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        IconButtonTv(
+                            focusRequester = topBarRequesters[TOP_SETTINGS],
                             iconRes = R.drawable.baseline_settings_24,
                             contentDescriptionRes = R.string.settings,
                             onShortClick = {
+                                openerIndex = TOP_SETTINGS
                                 launcherViewModel.setShowSettingsScreen(true)
                             }
                         )
-
-                        Spacer(modifier = Modifier.width(20.dp))
-
-                        AndroidView(
-                            factory = { context ->
-                                TextClock(context).apply {
-                                    format12Hour = "hh:mm:ss"
-                                    format24Hour = "HH:mm:ss"
-                                    textSize = 20F
-                                    setEnabled(false)
-                                    setTextColor(android.graphics.Color.WHITE)
-                                }
-                            },
-                            modifier = Modifier
-                                .background(
-                                    color = OnWallpaperContainer,
-                                    shape = RoundedCornerShape(16.dp)
-                                )
-                                .padding(10.dp)
-                                .focusable(enabled = false)
-                        )
                     }
 
-                    Box(
+                    // 左上角:大号日期 + 时间 + 天气。它不参与顶部栏高度(否则会把"全部应用"面板挤下去),
+                    // 所以面板展开时跟着淡出,免得被面板压掉一半。
+                    HomeClock(
+                        weather = weather,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(color = Color.Transparent)
+                            .align(Alignment.TopStart)
+                            .graphicsLayer { alpha = clockAlpha }
+                            .padding(start = 24.dp, top = 14.dp)
+                    )
+
+                    HomeScreen(viewModel = launcherViewModel)
+
+                    // 文件与壁纸是整屏浮层:盖住首页和顶部栏,返回键回到桌面。
+                    AnimatedVisibility(
+                        visible = overlay == Overlay.FILES,
+                        modifier = Modifier.fillMaxSize(),
+                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                        exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
                     ) {
-                        // Clamp instead of writing back to the state holder, which would mutate
-                        // state during composition.
-                        when (selectedTabIndex.coerceIn(0, tabs.lastIndex)) {
-                            0 -> HomeScreen(viewModel = launcherViewModel)
-                            1 -> AppsScreen(viewModel = launcherViewModel)
-                            2 -> FilesScreen(
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(OVERLAY_SCRIM)
+                        ) {
+                            FilesScreen(
                                 viewModel = filesViewModel,
                                 onBackAtTopLevel = {
-                                    // 焦点精确回到"文件"tab;请求失败也不影响返回键本身
-                                    runCatching {
-                                        tabFocusRequesters.getOrNull(selectedTabIndex)
-                                            ?.requestFocus()
-                                    }
+                                    launcherViewModel.setOverlay(Overlay.NONE)
                                 }
                             )
+                        }
+                    }
 
-                            else -> WallpaperScreen(
-                                viewModel = wallpaperViewModel,
-                                topBarHeight = topBarHeight
-                            )
+                    AnimatedVisibility(
+                        visible = overlay == Overlay.WALLPAPER,
+                        modifier = Modifier.fillMaxSize(),
+                        enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                        exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(OVERLAY_SCRIM)
+                        ) {
+                            WallpaperScreen(viewModel = wallpaperViewModel)
                         }
                     }
 

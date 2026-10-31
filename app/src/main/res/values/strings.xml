@@ -13,6 +13,9 @@
     <string name="replace">Replace</string>
     <string name="add_app">Add app</string>
     <string name="choose_an_app">Choose an app</string>
+    <string name="all_apps">All apps</string>
+    <string name="apps_loading">Loading apps…</string>
+    <string name="apps_count">%1$d apps</string>
 
     <!-- App operation -->
     <string name="run">Run</string>
@@ -22,6 +25,16 @@
 
     <!-- TV -->
     <string name="signal_source">Signal source</string>
+
+    <!-- Weather -->
+    <string name="weather_clear">Clear</string>
+    <string name="weather_partly_cloudy">Partly cloudy</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_fog">Foggy</string>
+    <string name="weather_rain">Rain</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_thunder">Thunder</string>
+    <string name="weather_high_low">High %1$d°, low %2$d°</string>
 
     <!-- Settings item -->
     <string name="tv_settings">TV settings</string>

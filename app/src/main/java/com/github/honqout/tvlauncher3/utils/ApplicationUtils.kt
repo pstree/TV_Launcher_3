@@ -326,6 +326,30 @@ class ApplicationUtils {
             }
         }
 
+        /**
+         * 所有可以启动的入口:电视应用通常只声明 LEANBACK_LAUNCHER,普通应用只声明 LAUNCHER,
+         * 在电视盒子上这两种都属于"已安装的应用",全部应用要一起列出来,否则会漏掉大半。
+         */
+        fun getAllLauncherActivityList(
+            context: Context,
+            packageName: String? = null
+        ): List<ResolveInfo> {
+            val normal = getLauncherActivityList(context, LauncherActivityType.NORMAL, packageName)
+            val leanback =
+                getLauncherActivityList(context, LauncherActivityType.LEANBACK, packageName)
+            if (leanback.isEmpty()) {
+                return normal
+            }
+            val normalKeys = normal.map { getPackageName(it) to getActivityName(it) }.toSet()
+            Log.i(
+                TAG,
+                "launcher activities: $packageName normal=${normal.size} leanback=${leanback.size}"
+            )
+            return normal + leanback.filterNot {
+                (getPackageName(it) to getActivityName(it)) in normalKeys
+            }
+        }
+
         fun getLauncherActivity(
             context: Context,
             type: LauncherActivityType,
@@ -333,7 +357,18 @@ class ApplicationUtils {
             activityName: String
         ): ResolveInfo? {
             val intentActivityList = getLauncherActivityList(context, type, packageName)
-            return intentActivityList.find { resolveInfo ->
+            val hit = intentActivityList.find { resolveInfo ->
+                activityName == getActivityName(resolveInfo)
+            }
+            if (hit != null) {
+                return hit
+            }
+            // 快捷方式可能是从"全部应用"(两个类别合并)里挑的,另一类别里再找一次。
+            val otherType = when (type) {
+                LauncherActivityType.NORMAL -> LauncherActivityType.LEANBACK
+                LauncherActivityType.LEANBACK -> LauncherActivityType.NORMAL
+            }
+            return getLauncherActivityList(context, otherType, packageName).find { resolveInfo ->
                 activityName == getActivityName(resolveInfo)
             }
         }
@@ -350,7 +385,11 @@ class ApplicationUtils {
             type: LauncherActivityType,
             packageName: String?
         ): List<ActivityModel> {
-            val intentActivityList = getLauncherActivityList(context, type, packageName)
+            val intentActivityList = if (type == LauncherActivityType.NORMAL) {
+                getAllLauncherActivityList(context, packageName)
+            } else {
+                getLauncherActivityList(context, type, packageName)
+            }
             val activityModelList: MutableList<ActivityModel> = mutableListOf()
             intentActivityList.forEach { resolveInfo ->
                 val activityModel = ActivityModel.fromResolveInfo(context, resolveInfo)

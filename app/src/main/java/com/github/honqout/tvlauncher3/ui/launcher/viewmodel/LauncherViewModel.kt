@@ -12,7 +12,6 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.honqout.tvlauncher3.R
 import com.github.honqout.tvlauncher3.data.ActivityModel
 import com.github.honqout.tvlauncher3.datastore.repository.IconRepository
 import com.github.honqout.tvlauncher3.datastore.repository.SettingsRepository
@@ -45,23 +44,20 @@ class LauncherViewModel @Inject constructor(
     val numColumns = IconRepository.NUM_FIXED_ACTIVITY
 
     // UI-related
-    val tabs = listOf(
-        Pair(R.drawable.baseline_home_24, R.string.home),
-        Pair(R.drawable.baseline_apps_24, R.string.apps),
-        Pair(R.drawable.baseline_folder_24, R.string.files),
-        Pair(R.drawable.baseline_wallpaper_24, R.string.wallpaper)
-    )
     private var oldConfig: Configuration? = null
     private val _topBarHeight = MutableStateFlow<Int>(0)
     val topBarHeight: StateFlow<Int> = _topBarHeight.asStateFlow()
-    private val _selectedTabIndex = MutableStateFlow<Int>(0)
-    val selectedTabIndex: StateFlow<Int> = _selectedTabIndex.asStateFlow()
+    private val _overlay = MutableStateFlow(Overlay.NONE)
+    val overlay: StateFlow<Overlay> = _overlay.asStateFlow()
     private val _showSettingsDialog = MutableStateFlow<Boolean>(false)
     val showSettingsDialog: StateFlow<Boolean> = _showSettingsDialog.asStateFlow()
     private val _showAppListDialog = MutableStateFlow<Boolean>(false)
     val showAppListDialog: StateFlow<Boolean> = _showAppListDialog.asStateFlow()
     private val _showAppActionDialog = MutableStateFlow<Boolean>(false)
     val showAppActionDialog: StateFlow<Boolean> = _showAppActionDialog.asStateFlow()
+    // 首页的"全部应用"面板是否展开:顶部栏的时钟要跟着它淡出。
+    private val _drawerOpen = MutableStateFlow<Boolean>(false)
+    val drawerOpen: StateFlow<Boolean> = _drawerOpen.asStateFlow()
 
     // data
     private val refreshFixedIconListSignal = MutableSharedFlow<Unit>(
@@ -122,6 +118,11 @@ class LauncherViewModel @Inject constructor(
 
         enum class AppListOp {
             INIT, ADD, REMOVE, REPLACE
+        }
+
+        /** 首页之上整屏打开的页面:文件浏览器与壁纸。返回键回到首页。 */
+        enum class Overlay {
+            NONE, FILES, WALLPAPER
         }
     }
 
@@ -465,7 +466,14 @@ class LauncherViewModel @Inject constructor(
     }
 
     fun sortActivityModelList(list: List<ActivityModel>): List<ActivityModel> {
-        return list.sortedBy {
+        // 一个应用可能声明多个启动入口(同包同名的 activity 别名),按「包名 + 名称」去重,
+        // 否则全部应用里会出现两张一模一样的图标。不同名称的入口(比如电视盒子里一个包挂了
+        // 两个不同的 app)仍然分开显示。
+        val distinct = list.distinctBy { it.packageName to it.label }
+        if (distinct.size != list.size) {
+            Log.i(TAG, "Dropped ${list.size - distinct.size} duplicated launcher entries.")
+        }
+        return distinct.sortedBy {
             it.label.lowercase()
         }
     }
@@ -490,8 +498,8 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
-    fun setSelectedTabIndex(newValue: Int) {
-        _selectedTabIndex.update {
+    fun setOverlay(newValue: Overlay) {
+        _overlay.update {
             newValue
         }
     }
@@ -510,6 +518,12 @@ class LauncherViewModel @Inject constructor(
 
     fun setShowAppActionScreen(newValue: Boolean) {
         _showAppActionDialog.update {
+            newValue
+        }
+    }
+
+    fun setDrawerOpen(newValue: Boolean) {
+        _drawerOpen.update {
             newValue
         }
     }

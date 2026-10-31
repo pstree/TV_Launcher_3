@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -66,6 +67,8 @@ private fun Drawable.toIconBitmap(): ImageBitmap {
 @Composable
 fun ActivityButtonTv(
     modifier: Modifier = Modifier,
+    focusRequester: FocusRequester = remember { FocusRequester() },
+    focusable: Boolean = true,
     activityModel: ActivityModel?,
     defaultIcon: Drawable,
     contentDefaultColor: Color = colorScheme.secondary,
@@ -141,6 +144,8 @@ fun ActivityButtonTv(
 
     RoundRectButtonTv(
         modifier = modifier,
+        focusRequester = focusRequester,
+        focusable = focusable,
         icon = {
             if (activityModel == null) {
                 IconFromDrawableTv(

@@ -76,7 +76,6 @@ fun FilesScreen(
 ) {
     val context = LocalContext.current
     val itemFocusRequester = remember { FocusRequester() }
-    val topBarHeight by viewModel.topBarHeight.collectAsStateWithLifecycle()
     val currentDir by viewModel.currentDir.collectAsStateWithLifecycle()
     val items by viewModel.items.collectAsStateWithLifecycle()
     val showPermissionDialog by viewModel.showPermissionDialog.collectAsStateWithLifecycle()
@@ -134,14 +133,12 @@ fun FilesScreen(
     // 换目录后的落焦点规则:
     //  · 进入目录 -> 焦点在第一项
     //  · 按返回 -> 焦点回到刚退出的那个目录项(含从卷返回顶层时的"内置存储"这一项)
-    //  · 首次进入文件页的顶层(卷列表) -> 不抢焦点,焦点留在 tab 上
+    //  · 首次进入文件页的顶层(卷列表) -> 焦点落在第一项上
+    //    (文件页现在是整屏浮层,没有上面那排标签可以停,焦点必须进到列表里)
     LaunchedEffect(currentDir) {
         focusedItem = null
         val targetPath = pendingFocusPath
         pendingFocusPath = null
-        if (currentDir == null && targetPath == null) {
-            return@LaunchedEffect
-        }
         val dirPath = currentDir?.absolutePath
         repeat(FOCUS_WAIT_FRAMES) {
             withFrameNanos { }
@@ -206,7 +203,7 @@ fun FilesScreen(
                 .fillMaxSize()
                 .padding(PADDING_SCREEN_EDGE)
         ) {
-            Spacer(modifier = Modifier.height((topBarHeight + 10).dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = currentDir?.absolutePath ?: stringResource(R.string.files),

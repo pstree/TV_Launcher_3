@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -40,6 +41,7 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
 private fun RoundRectButtonTvImpl(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester = remember { FocusRequester() },
+    focusable: Boolean = true,
     icon: @Composable () -> Unit,
     label: String,
     backgroundColor: Color = colorScheme.background,
@@ -52,6 +54,8 @@ private fun RoundRectButtonTvImpl(
     Surface(
         modifier = modifier
             .focusRequester(focusRequester)
+            // 被别的浮层盖住时(首页快捷行在抽屉打开期间)要把焦点挡掉,否则方向键会跳到看不见的按钮上。
+            .focusProperties { canFocus = focusable }
             // tv-material 1.1.0's clickable Surface only fires onClick/onLongClick from DPAD-enter
             // key events (SurfaceClickableUtils.handleDPadEnter); it has no pointer handler at all,
             // so touch and mouse taps/long presses must be wired up explicitly here. The remote's
@@ -121,6 +125,8 @@ private fun RoundRectButtonTvImpl(
 @Composable
 fun RoundRectButtonTv(
     modifier: Modifier = Modifier,
+    focusRequester: FocusRequester = remember { FocusRequester() },
+    focusable: Boolean = true,
     icon: @Composable () -> Unit,
     label: String,
     backgroundColor: Color = colorScheme.background,
@@ -132,6 +138,8 @@ fun RoundRectButtonTv(
 ) {
     RoundRectButtonTvImpl(
         modifier = modifier,
+        focusRequester = focusRequester,
+        focusable = focusable,
         icon = icon,
         label = label,
         backgroundColor = backgroundColor,

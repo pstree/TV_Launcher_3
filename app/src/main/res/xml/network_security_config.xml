@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  老电视盒子(如小米 S905 系列)的系统 CA 库缺 Let's Encrypt 的新根,api.open-meteo.com
+  的证书链会报 "Trust anchor not found"。这几个接口同时支持明文 HTTP,所以只给它们开一个口子:
+  HTTPS 握手失败时退回 HTTP,其余域名仍然只允许 HTTPS。
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">api.open-meteo.com</domain>
+        <domain includeSubdomains="true">geocoding-api.open-meteo.com</domain>
+        <domain includeSubdomains="true">ipinfo.io</domain>
+        <domain includeSubdomains="true">ipwho.is</domain>
+    </domain-config>
+</network-security-config>

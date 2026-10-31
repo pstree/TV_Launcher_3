@@ -32,8 +32,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -68,8 +71,7 @@ private const val COLUMNS = 4
 
 @Composable
 fun WallpaperScreen(
-    viewModel: WallpaperViewModel = hiltViewModel(),
-    topBarHeight: Int = 0
+    viewModel: WallpaperViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val items by viewModel.items.collectAsStateWithLifecycle()
@@ -83,6 +85,19 @@ fun WallpaperScreen(
     }
 
     var pendingApply by remember { mutableStateOf<WallpaperItem?>(null) }
+
+    // 壁纸页是整屏浮层:进来后必须把遥控器焦点收进来,否则方向键还在动背后的首页图标。
+    // 图片是联网加载的,首项可能晚于首帧才组合出来,所以在列表第一次非空时再请求一次。
+    val firstTileRequester = remember { FocusRequester() }
+    var focusRequested by remember { mutableStateOf(false) }
+    LaunchedEffect(items) {
+        if (focusRequested || items.isEmpty()) {
+            return@LaunchedEffect
+        }
+        focusRequested = true
+        withFrameNanos { }
+        runCatching { firstTileRequester.requestFocus() }
+    }
 
     val doApply: (WallpaperItem) -> Unit = { item ->
         viewModel.applyWallpaper(item) { result ->
@@ -135,7 +150,7 @@ fun WallpaperScreen(
                 .fillMaxSize()
                 .padding(PADDING_SCREEN_EDGE)
         ) {
-            Spacer(modifier = Modifier.height((topBarHeight + 10).dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -180,9 +195,17 @@ fun WallpaperScreen(
                     itemsIndexed(
                         items = items,
                         key = { _, item -> item.imageUrl }
-                    ) { _, item ->
+                    ) { index, item ->
                         WallpaperTile(
-                            modifier = Modifier.aspectRatio(16F / 9F),
+                            modifier = Modifier
+                                .aspectRatio(16F / 9F)
+                                .then(
+                                    if (index == 0) {
+                                        Modifier.focusRequester(firstTileRequester)
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
                             item = item,
                             onClick = { onTileClick(item) }
                         )
