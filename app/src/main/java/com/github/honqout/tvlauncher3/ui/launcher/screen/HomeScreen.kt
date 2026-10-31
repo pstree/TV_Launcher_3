@@ -396,9 +396,11 @@ private fun QuickAppsRow(
             .onSizeChanged { onMeasure(it.height) }
             .background(
                 color = OnWallpaperContainer,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            // 焦点态会把整格内容居中放大 1.1 倍,上下各外扩约 6dp;原来上下只留 6dp,
+            // 聚焦时图标几乎顶到玻璃背景的上沿,所以这里把上方留白加厚。
+            .padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top
     ) {
